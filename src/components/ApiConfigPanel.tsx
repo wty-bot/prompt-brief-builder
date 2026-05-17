@@ -1,4 +1,5 @@
 import type { ChangeEvent } from "react";
+import { ChevronDown, KeyRound, PlugZap } from "lucide-react";
 
 import type { ApiConfig } from "../types/app";
 
@@ -31,110 +32,126 @@ export function ApiConfigPanel({
   onTestConnection,
 }: ApiConfigPanelProps) {
   return (
-    <section className="rounded-[28px] border border-black/5 bg-white/70 p-6 shadow-soft backdrop-blur">
-      <div className="mb-5 flex items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-semibold text-ink">模型配置</h2>
-          <p className="mt-1 text-sm leading-6 text-ink/65">
-            使用 OpenAI-compatible API。首版按 `/chat/completions` 协议请求。
-          </p>
+    <details className="panel group overflow-hidden" open>
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-4 p-5">
+        <div className="flex items-center gap-4">
+          <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-ink text-vellum shadow-soft">
+            <PlugZap className="h-5 w-5" />
+          </span>
+          <div>
+            <p className="eyebrow">Connection</p>
+            <h2 className="mt-1 text-xl font-semibold tracking-tight text-ink">
+              连接模型
+            </h2>
+          </div>
         </div>
-        <button
-          type="button"
-          onClick={onTestConnection}
-          disabled={disabled}
-          className="rounded-full border border-moss/20 bg-moss px-4 py-2 text-sm font-medium text-white transition hover:bg-moss/90 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          测试连接
-        </button>
-      </div>
+        <ChevronDown className="h-5 w-5 text-ink/40 transition group-open:rotate-180" />
+      </summary>
 
-      <div className="grid gap-4">
-        <label className="grid gap-2">
-          <span className="text-sm font-medium text-ink">Base URL</span>
-          <input
-            type="url"
-            value={value.baseUrl}
-            onChange={(event) => onChange(updateStringField(value, "baseUrl", event))}
-            placeholder="https://api.openai.com/v1"
-            className="rounded-2xl border border-black/10 bg-paper/60 px-4 py-3 text-sm text-ink outline-none transition focus:border-moss focus:ring-2 focus:ring-moss/15"
-          />
-        </label>
+      <div className="border-t border-ink/8 px-5 pb-5 pt-1">
+        <div className="mb-5 flex items-start justify-between gap-4 rounded-3xl border border-ink/8 bg-paper/55 p-4">
+          <div className="flex items-start gap-3">
+            <KeyRound className="mt-0.5 h-4 w-4 text-moss" />
+            <p className="text-sm leading-6 text-ink/68">
+              默认不保存 API Key。勾选记住配置时，也只保存 Base URL、Model 和温度。
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onTestConnection}
+            disabled={disabled}
+            className="ghost-button shrink-0"
+          >
+            测试连接
+          </button>
+        </div>
 
-        <label className="grid gap-2">
-          <span className="text-sm font-medium text-ink">API Key</span>
-          <input
-            type="password"
-            value={value.apiKey}
-            onChange={(event) => onChange(updateStringField(value, "apiKey", event))}
-            placeholder="sk-..."
-            className="rounded-2xl border border-black/10 bg-paper/60 px-4 py-3 text-sm text-ink outline-none transition focus:border-moss focus:ring-2 focus:ring-moss/15"
-          />
-        </label>
-
-        <div className="grid gap-4 sm:grid-cols-[1fr_160px]">
+        <div className="grid gap-4">
           <label className="grid gap-2">
-            <span className="text-sm font-medium text-ink">Model</span>
+            <span className="text-sm font-semibold text-ink">Base URL</span>
             <input
-              type="text"
-              value={value.model}
-              onChange={(event) => onChange(updateStringField(value, "model", event))}
-              placeholder="gpt-4o-mini"
-              className="rounded-2xl border border-black/10 bg-paper/60 px-4 py-3 text-sm text-ink outline-none transition focus:border-moss focus:ring-2 focus:ring-moss/15"
+              type="url"
+              value={value.baseUrl}
+              onChange={(event) => onChange(updateStringField(value, "baseUrl", event))}
+              placeholder="https://api.openai.com/v1"
+              className="field"
             />
           </label>
 
           <label className="grid gap-2">
-            <span className="text-sm font-medium text-ink">Temperature</span>
+            <span className="text-sm font-semibold text-ink">API Key</span>
             <input
-              type="number"
-              min="0"
-              max="1"
-              step="0.1"
-              value={value.temperature}
+              type="password"
+              value={value.apiKey}
+              onChange={(event) => onChange(updateStringField(value, "apiKey", event))}
+              placeholder="sk-..."
+              className="field"
+            />
+          </label>
+
+          <div className="grid gap-4 sm:grid-cols-[1fr_160px]">
+            <label className="grid gap-2">
+              <span className="text-sm font-semibold text-ink">Model</span>
+              <input
+                type="text"
+                value={value.model}
+                onChange={(event) => onChange(updateStringField(value, "model", event))}
+                placeholder="gpt-4o-mini"
+                className="field"
+              />
+            </label>
+
+            <label className="grid gap-2">
+              <span className="text-sm font-semibold text-ink">Temperature</span>
+              <input
+                type="number"
+                min="0"
+                max="1"
+                step="0.1"
+                value={value.temperature}
+                onChange={(event) =>
+                  onChange({
+                    ...value,
+                    temperature: Number(event.target.value || 0),
+                  })
+                }
+                className="field"
+              />
+            </label>
+          </div>
+
+          <label className="flex items-start gap-3 rounded-2xl border border-ink/8 bg-white/55 p-4">
+            <input
+              type="checkbox"
+              checked={value.rememberConfig}
               onChange={(event) =>
                 onChange({
                   ...value,
-                  temperature: Number(event.target.value || 0),
+                  rememberConfig: event.target.checked,
                 })
               }
-              className="rounded-2xl border border-black/10 bg-paper/60 px-4 py-3 text-sm text-ink outline-none transition focus:border-moss focus:ring-2 focus:ring-moss/15"
+              className="mt-1 h-4 w-4 rounded border-ink/20 text-moss focus:ring-moss"
             />
+            <span className="text-sm leading-6 text-ink/68">
+              记住非敏感配置到当前浏览器。不会保存 API Key。
+            </span>
           </label>
-        </div>
 
-        <label className="flex items-start gap-3 rounded-2xl border border-black/10 bg-paper/40 p-4">
-          <input
-            type="checkbox"
-            checked={value.rememberConfig}
-            onChange={(event) =>
-              onChange({
-                ...value,
-                rememberConfig: event.target.checked,
-              })
-            }
-            className="mt-1 h-4 w-4 rounded border-black/20 text-moss focus:ring-moss"
-          />
-          <span className="text-sm leading-6 text-ink/75">
-            记住非敏感配置到当前浏览器。首版不会保存 API Key，只会保存 Base URL、Model、Temperature
-            和这个开关状态。
-          </span>
-        </label>
-
-        <div
-          className={`rounded-2xl border px-4 py-3 text-sm leading-6 ${
-            connectionTone === "success"
-              ? "border-moss/20 bg-moss/5 text-ink"
-              : connectionTone === "error"
-                ? "border-red-500/20 bg-red-50 text-red-900"
-                : connectionTone === "warning"
-                  ? "border-amberline/20 bg-amberline/10 text-ink"
-                  : "border-black/10 bg-white/60 text-ink/70"
-          }`}
-        >
-          {connectionMessage}
+          <div
+            className={`rounded-2xl border px-4 py-3 text-sm leading-6 ${
+              connectionTone === "success"
+                ? "border-moss/20 bg-moss/8 text-ink"
+                : connectionTone === "error"
+                  ? "border-oxblood/20 bg-oxblood/8 text-oxblood"
+                  : connectionTone === "warning"
+                    ? "border-amberline/20 bg-amberline/10 text-ink"
+                    : "border-ink/10 bg-white/55 text-ink/68"
+            }`}
+          >
+            {connectionMessage}
+          </div>
         </div>
       </div>
-    </section>
+    </details>
   );
 }

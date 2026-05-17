@@ -1,4 +1,5 @@
 import type { ChangeEvent } from "react";
+import { FilePenLine, WandSparkles } from "lucide-react";
 
 import type { RequirementInput } from "../types/app";
 
@@ -70,18 +71,33 @@ export function RequirementForm({
     value.rawRequirement.trim().length > 0 && value.rawRequirement.trim().length < 10;
 
   return (
-    <section className="rounded-[28px] border border-black/5 bg-white/70 p-6 shadow-soft backdrop-blur">
-      <div className="mb-5 flex flex-col gap-2">
-        <h2 className="text-xl font-semibold text-ink">需求输入</h2>
-        <p className="text-sm leading-6 text-ink/65">
-          把你现在能说清楚的内容都先放进来。信息不完整没关系，下一步会由 AI 来追问关键缺口。
+    <section className="panel overflow-hidden">
+      <div className="border-b border-ink/8 bg-white/40 p-5">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-moss text-white shadow-soft">
+              <FilePenLine className="h-5 w-5" />
+            </span>
+            <div>
+              <p className="eyebrow">Draft Input</p>
+              <h2 className="mt-1 text-xl font-semibold tracking-tight text-ink">
+                输入你的原始想法
+              </h2>
+            </div>
+          </div>
+          <span className="hidden rounded-full border border-ink/10 bg-paper/70 px-3 py-1 text-xs font-semibold text-ink/58 sm:inline-flex">
+            不完整也可以
+          </span>
+        </div>
+        <p className="mt-4 text-sm leading-6 text-ink/62">
+          这里像一张草稿纸。把你知道的先写下来，下一步 AI 会像产品访谈一样补问关键缺口。
         </p>
       </div>
 
-      <div className="grid gap-4">
+      <div className="grid gap-4 p-5">
         {fieldMeta.map((field) => (
           <label key={field.key} className="grid gap-2">
-            <span className="text-sm font-medium text-ink">
+            <span className="text-sm font-semibold text-ink">
               {field.label}
               {field.required ? " *" : ""}
             </span>
@@ -90,7 +106,11 @@ export function RequirementForm({
               value={value[field.key]}
               onChange={(event) => onChange(updateField(value, field.key, event))}
               placeholder={field.placeholder}
-              className="resize-y rounded-2xl border border-black/10 bg-paper/60 px-4 py-3 text-sm leading-6 text-ink outline-none transition focus:border-moss focus:ring-2 focus:ring-moss/15"
+              className={`field resize-y ${
+                field.key === "rawRequirement"
+                  ? "min-h-[180px] bg-vellum bg-paper-grid bg-[size:22px_22px] text-base leading-8"
+                  : ""
+              }`}
             />
           </label>
         ))}
@@ -105,8 +125,9 @@ export function RequirementForm({
           type="button"
           onClick={onGenerateQuestions}
           disabled={disabled || !value.rawRequirement.trim()}
-          className="rounded-full border border-ink bg-ink px-5 py-3 text-sm font-medium text-white transition hover:bg-ink/90 disabled:cursor-not-allowed disabled:opacity-60"
+          className="primary-button w-full gap-2"
         >
+          <WandSparkles className="h-4 w-4" />
           生成澄清问题
         </button>
       </div>

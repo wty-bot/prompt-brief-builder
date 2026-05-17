@@ -3,8 +3,8 @@
 @tailwind utilities;
 
 :root {
-  color: #1f2520;
-  background: #f7f1e5;
+  color: #161a16;
+  background: #f4eee2;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -20,9 +20,11 @@ body {
   min-width: 320px;
   min-height: 100vh;
   background:
-    radial-gradient(circle at top left, rgba(15, 118, 110, 0.09), transparent 30%),
-    radial-gradient(circle at top right, rgba(217, 119, 6, 0.08), transparent 24%),
-    #f7f1e5;
+    radial-gradient(circle at 12% 8%, rgba(13, 148, 136, 0.18), transparent 26rem),
+    radial-gradient(circle at 88% 12%, rgba(217, 138, 27, 0.16), transparent 24rem),
+    radial-gradient(circle at 50% 100%, rgba(22, 26, 22, 0.1), transparent 32rem),
+    linear-gradient(135deg, rgba(255,255,255,0.42), rgba(244,238,226,0.78)),
+    #f4eee2;
 }
 
 * {
@@ -37,4 +39,45 @@ textarea {
 
 ::selection {
   background: rgba(15, 118, 110, 0.18);
+}
+
+@layer components {
+  .panel {
+    @apply rounded-[32px] border border-ink/10 bg-vellum/80 shadow-soft shadow-insetline backdrop-blur-xl;
+  }
+
+  .panel-dark {
+    @apply rounded-[36px] border border-white/10 bg-ink text-vellum shadow-lift shadow-insetline;
+  }
+
+  .eyebrow {
+    @apply text-xs font-semibold uppercase tracking-[0.22em] text-moss;
+  }
+
+  .field {
+    @apply w-full rounded-2xl border border-ink/10 bg-white/70 px-4 py-3 text-sm leading-6 text-ink outline-none transition placeholder:text-ink/35 focus:border-moss focus:bg-white focus:ring-4 focus:ring-moss/10;
+  }
+
+  .primary-button {
+    @apply inline-flex min-h-11 items-center justify-center rounded-full border border-ink bg-ink px-5 py-3 text-sm font-semibold text-vellum shadow-soft transition hover:-translate-y-0.5 hover:bg-graphite disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-55;
+  }
+
+  .accent-button {
+    @apply inline-flex min-h-11 items-center justify-center rounded-full border border-moss bg-moss px-5 py-3 text-sm font-semibold text-white shadow-soft transition hover:-translate-y-0.5 hover:bg-deepmoss disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-55;
+  }
+
+  .ghost-button {
+    @apply inline-flex min-h-11 items-center justify-center rounded-full border border-ink/10 bg-white/60 px-4 py-2 text-sm font-semibold text-ink transition hover:border-moss/40 hover:text-deepmoss disabled:cursor-not-allowed disabled:opacity-55;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.001ms !important;
+  }
 }

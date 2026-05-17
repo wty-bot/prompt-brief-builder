@@ -265,7 +265,9 @@ function App() {
 
   return (
     <div className="min-h-screen bg-paper text-ink">
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+      <div className="pointer-events-none fixed inset-0 bg-paper-grid bg-[size:36px_36px] opacity-[0.18]" />
+      <div className="pointer-events-none fixed left-1/2 top-0 h-80 w-80 -translate-x-1/2 rounded-full bg-moss/12 blur-3xl" />
+      <div className="relative mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
         <AppHeader />
 
         {globalMessage ? (
@@ -276,8 +278,8 @@ function App() {
           />
         ) : null}
 
-        <main className="grid gap-6 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
-          <div className="grid gap-6">
+        <main className="grid gap-6 xl:grid-cols-[minmax(360px,0.88fr)_minmax(0,1.12fr)] xl:items-start">
+          <div className="grid gap-6 xl:sticky xl:top-6">
             <ApiConfigPanel
               value={apiConfig}
               disabled={phase === "testingConnection"}
@@ -325,7 +327,7 @@ function App() {
           finalPromptMarkdown={result.finalPromptMarkdown}
         />
 
-        <footer className="grid gap-4 rounded-[28px] border border-black/5 bg-white/60 p-6 text-sm leading-6 text-ink/70 shadow-soft backdrop-blur md:grid-cols-3">
+        <footer className="grid gap-4 rounded-[32px] border border-ink/8 bg-vellum/70 p-6 text-sm leading-6 text-ink/68 shadow-soft backdrop-blur md:grid-cols-3">
           <div>
             <p className="font-semibold text-ink">隐私与安全</p>
             <p className="mt-2">

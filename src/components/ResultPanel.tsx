@@ -1,4 +1,5 @@
 import ReactMarkdown from "react-markdown";
+import { ClipboardCopy, FileCheck2, RotateCcw } from "lucide-react";
 
 type ResultPanelProps = {
   finalPromptMarkdown: string;
@@ -20,14 +21,15 @@ function MarkdownCard({
   onAction: () => void;
 }) {
   return (
-    <article className="rounded-3xl border border-black/8 bg-white/80 p-5">
+    <article className="rounded-[28px] border border-ink/8 bg-vellum/90 p-5 shadow-insetline">
       <div className="flex items-center justify-between gap-3">
         <h3 className="text-lg font-semibold text-ink">{title}</h3>
         <button
           type="button"
           onClick={onAction}
-          className="rounded-full border border-black/10 px-4 py-2 text-sm font-medium text-ink transition hover:border-moss hover:text-moss"
+          className="ghost-button gap-2"
         >
+          <ClipboardCopy className="h-4 w-4" />
           {actionLabel}
         </button>
       </div>
@@ -46,24 +48,33 @@ export function ResultPanel({
   onClear,
 }: ResultPanelProps) {
   return (
-    <section className="rounded-[28px] border border-black/5 bg-white/70 p-6 shadow-soft backdrop-blur">
-      <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h2 className="text-xl font-semibold text-ink">优化结果</h2>
-          <p className="mt-1 text-sm leading-6 text-ink/65">
-            最终输出固定为 Markdown，适合直接复制给 Coding Agent 或通用 Agent。
-          </p>
+    <section className="panel overflow-hidden">
+      <div className="border-b border-ink/8 bg-ink p-5 text-vellum">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-moss">
+              Ready Brief
+            </p>
+            <h2 className="mt-2 flex items-center gap-3 text-2xl font-semibold tracking-tight">
+              <FileCheck2 className="h-6 w-6 text-amberline" />
+              优化结果
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-vellum/62">
+              最终输出固定为 Markdown，适合直接复制给 Coding Agent 或通用 Agent。
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClear}
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-white/12 bg-white/8 px-4 py-2 text-sm font-semibold text-vellum transition hover:bg-white/12"
+          >
+            <RotateCcw className="h-4 w-4" />
+            清空当前会话
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={onClear}
-          className="rounded-full border border-black/10 px-4 py-2 text-sm font-medium text-ink transition hover:border-red-400 hover:text-red-600"
-        >
-          清空当前会话
-        </button>
       </div>
 
-      <div className="grid gap-4">
+      <div className="grid gap-4 p-5">
         <MarkdownCard
           title="最终 Prompt"
           value={finalPromptMarkdown}

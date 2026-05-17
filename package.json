@@ -1,0 +1,35 @@
+{
+  "name": "ai-requirement-prompt-optimizer",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "一个浏览器端 AI 需求描述优化器，把模糊需求澄清并整理成可交给 Agent 执行的 Markdown Prompt。",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "lint": "tsc --noEmit --pretty false && tsc --noEmit -p tsconfig.node.json --pretty false",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "check": "npm run lint && npm run test:run && npm run build"
+  },
+  "dependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "lucide-react": "^0.468.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-markdown": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^25.8.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "autoprefixer": "^10.4.20",
+    "jsdom": "^29.1.1",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.3",
+    "vitest": "^2.1.8"
+  }
+}

@@ -140,7 +140,7 @@ Content-Type: application/json
 
 工作流会自动：
 
-1. 安装依赖
+1. 使用 `npm ci` 安装锁定依赖
 2. 构建项目
 3. 部署 `dist/` 到 GitHub Pages
 

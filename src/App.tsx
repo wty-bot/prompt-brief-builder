@@ -4,9 +4,11 @@ import { ApiConfigPanel } from "./components/ApiConfigPanel";
 import { AppHeader } from "./components/AppHeader";
 import { ClarifyingQuestionsPanel } from "./components/ClarifyingQuestionsPanel";
 import { ComparisonPanel } from "./components/ComparisonPanel";
+import { DiagnosticsPanel } from "./components/DiagnosticsPanel";
 import { RequirementForm } from "./components/RequirementForm";
 import { ResultPanel } from "./components/ResultPanel";
 import { StatusCallout } from "./components/StatusCallout";
+import { WorkflowStrip, type WorkflowStep } from "./components/WorkflowStrip";
 import { normalizeErrorMessage } from "./lib/errors";
 import {
   buildClarifyingQuestionsUserPrompt,
@@ -29,6 +31,7 @@ import {
 } from "./lib/storage";
 import type {
   ApiConfig,
+  ApiDiagnostics,
   AppPhase,
   ClarifyingAnswer,
   ClarifyingQuestion,
@@ -76,6 +79,7 @@ function App() {
     "请先填写 Base URL、API Key 和 Model，再测试连接。",
   );
   const [connectionTone, setConnectionTone] = useState<NoticeTone>("neutral");
+  const [diagnostics, setDiagnostics] = useState<ApiDiagnostics | null>(null);
   const [globalMessage, setGlobalMessage] = useState<{
     tone: NoticeTone;
     title: string;
@@ -100,6 +104,52 @@ function App() {
     apiConfig.baseUrl.trim() && apiConfig.apiKey.trim() && apiConfig.model.trim(),
   );
 
+  const workflowSteps: WorkflowStep[] = [
+    {
+      key: "01",
+      label: "连接模型",
+      description: "验证 API 配置和调用协议",
+      status:
+        phase === "ready" ||
+        phase === "generatingQuestions" ||
+        phase === "answeringQuestions" ||
+        phase === "generatingPrompt" ||
+        phase === "completed"
+          ? "done"
+          : phase === "testingConnection"
+            ? "active"
+            : "idle",
+    },
+    {
+      key: "02",
+      label: "输入需求",
+      description: "写下原始想法和必要上下文",
+      status: requirementInput.rawRequirement.trim() ? "done" : "active",
+    },
+    {
+      key: "03",
+      label: "澄清缺口",
+      description: "回答 AI 生成的关键问题",
+      status:
+        phase === "completed" || phase === "generatingPrompt"
+          ? "done"
+          : questions.length
+            ? "active"
+            : "idle",
+    },
+    {
+      key: "04",
+      label: "生成 Brief",
+      description: "复制可执行的 Agent 任务书",
+      status:
+        phase === "completed"
+          ? "done"
+          : phase === "generatingPrompt"
+            ? "active"
+            : "idle",
+    },
+  ];
+
   async function handleTestConnection() {
     if (!hasConfig) {
       setConnectionTone("warning");
@@ -111,7 +161,8 @@ function App() {
       setPhase("testingConnection");
       setConnectionTone("neutral");
       setConnectionMessage("正在测试连接，请稍候...");
-      await testConnection(apiConfig);
+      const response = await testConnection(apiConfig);
+      setDiagnostics(response.diagnostics);
       setPhase("ready");
       setConnectionTone("success");
       setConnectionMessage("连接成功：当前配置可以正常拿到模型响应。");
@@ -122,6 +173,9 @@ function App() {
       });
     } catch (error) {
       setPhase("error");
+      if (error instanceof Error && "diagnostics" in error) {
+        setDiagnostics((error as { diagnostics: ApiDiagnostics }).diagnostics);
+      }
       setConnectionTone("error");
       setConnectionMessage(normalizeErrorMessage(error));
       setGlobalMessage({
@@ -159,13 +213,15 @@ function App() {
         description: "AI 正在找出最影响执行质量的信息缺口。",
       });
 
-      const content = await generateChatCompletion(
+      const response = await generateChatCompletion(
         apiConfig,
+        "clarify-questions",
         clarifyingQuestionsSystemPrompt(),
         buildClarifyingQuestionsUserPrompt(requirementInput),
       );
+      setDiagnostics(response.diagnostics);
 
-      const payload = parseClarifyingQuestions(content);
+      const payload = parseClarifyingQuestions(response.content);
       setQuestions(payload.questions);
       setAnswers(
         payload.questions.map((question) => ({
@@ -183,6 +239,9 @@ function App() {
       });
     } catch (error) {
       setPhase("error");
+      if (error instanceof Error && "diagnostics" in error) {
+        setDiagnostics((error as { diagnostics: ApiDiagnostics }).diagnostics);
+      }
       setGlobalMessage({
         tone: "error",
         title: "生成澄清问题失败",
@@ -209,13 +268,15 @@ function App() {
         description: "AI 正在把原始需求与补充回答整合成可直接执行的 Markdown。",
       });
 
-      const content = await generateChatCompletion(
+      const response = await generateChatCompletion(
         apiConfig,
+        "compose-brief",
         finalPromptSystemPrompt(),
         buildFinalPromptUserPrompt(requirementInput, answers),
       );
+      setDiagnostics(response.diagnostics);
 
-      const parsed = parseOptimizedPromptResult(content);
+      const parsed = parseOptimizedPromptResult(response.content);
       setResult(parsed);
       setPhase("completed");
       setGlobalMessage({
@@ -225,6 +286,9 @@ function App() {
       });
     } catch (error) {
       setPhase("error");
+      if (error instanceof Error && "diagnostics" in error) {
+        setDiagnostics((error as { diagnostics: ApiDiagnostics }).diagnostics);
+      }
       setGlobalMessage({
         tone: "error",
         title: "生成最终 Prompt 失败",
@@ -255,6 +319,7 @@ function App() {
     setQuestions([]);
     setAnswers([]);
     setResult(defaultResult);
+    setDiagnostics(null);
     setPhase(hasConfig ? "ready" : "idle");
     setGlobalMessage({
       tone: "neutral",
@@ -269,6 +334,8 @@ function App() {
       <div className="pointer-events-none fixed left-1/2 top-0 h-80 w-80 -translate-x-1/2 rounded-full bg-moss/12 blur-3xl" />
       <div className="relative mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
         <AppHeader />
+
+        <WorkflowStrip steps={workflowSteps} />
 
         {globalMessage ? (
           <StatusCallout
@@ -298,6 +365,13 @@ function App() {
           </div>
 
           <div className="grid gap-6">
+            <DiagnosticsPanel
+              diagnostics={diagnostics}
+              onCopy={() =>
+                copyText(JSON.stringify(diagnostics, null, 2), "诊断信息已复制")
+              }
+            />
+
             <ClarifyingQuestionsPanel
               questions={questions}
               answers={answers}

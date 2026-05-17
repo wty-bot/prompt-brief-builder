@@ -6,6 +6,35 @@ export type ApiConfig = {
   rememberConfig: boolean;
 };
 
+export type ApiCallContext = "connection-test" | "clarify-questions" | "compose-brief";
+
+export type ApiTransportState =
+  | "ok"
+  | "network"
+  | "timeout"
+  | "http"
+  | "parse"
+  | "cors"
+  | "capability";
+
+export type ApiDiagnostics = {
+  context: ApiCallContext;
+  endpoint: string;
+  elapsedMs: number;
+  transport: ApiTransportState;
+  usedJsonMode: boolean;
+  status?: number;
+  statusText?: string;
+  responsePreview?: string;
+  providerHint: string;
+  suggestion: string;
+};
+
+export type ApiCallResult = {
+  content: string;
+  diagnostics: ApiDiagnostics;
+};
+
 export type RequirementInput = {
   rawRequirement: string;
   projectBackground: string;
@@ -46,3 +75,13 @@ export type AppPhase =
 export type ClarifyingQuestionsPayload = {
   questions: ClarifyingQuestion[];
 };
+
+export class ApiRequestError extends Error {
+  diagnostics: ApiDiagnostics;
+
+  constructor(message: string, diagnostics: ApiDiagnostics) {
+    super(message);
+    this.name = "ApiRequestError";
+    this.diagnostics = diagnostics;
+  }
+}

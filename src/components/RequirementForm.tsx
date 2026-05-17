@@ -61,6 +61,9 @@ const fieldMeta: Array<{
   },
 ];
 
+const optionalFields = fieldMeta.filter((field) => field.key !== "rawRequirement");
+const primaryField = fieldMeta.find((field) => field.key === "rawRequirement")!;
+
 export function RequirementForm({
   value,
   disabled,
@@ -95,25 +98,40 @@ export function RequirementForm({
       </div>
 
       <div className="grid gap-4 p-5">
-        {fieldMeta.map((field) => (
-          <label key={field.key} className="grid gap-2">
+        <label key={primaryField.key} className="grid gap-2">
+          <span className="text-sm font-semibold text-ink">
+            {primaryField.label} *
+          </span>
+          <textarea
+            rows={primaryField.rows}
+            value={value[primaryField.key]}
+            onChange={(event) => onChange(updateField(value, primaryField.key, event))}
+            placeholder={primaryField.placeholder}
+            className="field min-h-[220px] resize-y bg-vellum bg-paper-grid bg-[size:22px_22px] text-base leading-8"
+          />
+        </label>
+
+        <details className="rounded-2xl border border-ink/8 bg-white/45">
+          <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-ink">
+            补充上下文（可选）
+          </summary>
+          <div className="grid gap-4 border-t border-ink/8 p-4">
+            {optionalFields.map((field) => (
+              <label key={field.key} className="grid gap-2">
             <span className="text-sm font-semibold text-ink">
               {field.label}
-              {field.required ? " *" : ""}
             </span>
             <textarea
               rows={field.rows}
               value={value[field.key]}
               onChange={(event) => onChange(updateField(value, field.key, event))}
               placeholder={field.placeholder}
-              className={`field resize-y ${
-                field.key === "rawRequirement"
-                  ? "min-h-[180px] bg-vellum bg-paper-grid bg-[size:22px_22px] text-base leading-8"
-                  : ""
-              }`}
+              className="field resize-y"
             />
           </label>
-        ))}
+            ))}
+          </div>
+        </details>
 
         {rawLengthWarning ? (
           <div className="rounded-2xl border border-amberline/20 bg-amberline/10 px-4 py-3 text-sm leading-6 text-ink">

@@ -32,7 +32,7 @@ export function ApiConfigPanel({
   onTestConnection,
 }: ApiConfigPanelProps) {
   return (
-    <details className="panel group overflow-hidden" open>
+    <details className="panel group overflow-hidden">
       <summary className="flex cursor-pointer list-none items-center justify-between gap-4 p-5">
         <div className="flex items-center gap-4">
           <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-ink text-vellum shadow-soft">

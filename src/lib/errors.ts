@@ -1,4 +1,18 @@
+import { ApiRequestError } from "../types/app";
+
 export function normalizeErrorMessage(error: unknown) {
+  if (error instanceof ApiRequestError) {
+    const details = [
+      error.diagnostics.status
+        ? `状态码 ${error.diagnostics.status}`
+        : error.diagnostics.transport,
+      error.diagnostics.providerHint,
+      error.diagnostics.suggestion,
+    ];
+
+    return `${error.message}。${details.filter(Boolean).join(" / ")}`;
+  }
+
   if (error instanceof Error) {
     const message = error.message.trim();
 

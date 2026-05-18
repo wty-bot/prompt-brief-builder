@@ -8,9 +8,14 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: desktop-release
+  cancel-in-progress: true
+
 jobs:
   release-windows:
     runs-on: windows-latest
+    timeout-minutes: 25
 
     steps:
       - name: Checkout
@@ -25,10 +30,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run checks
-        run: npm run check
+      - name: Run lint and tests
+        run: npm run lint && npm run test:run
 
       - name: Build Windows installer
+        env:
+          ELECTRON_CACHE: ${{ runner.temp }}\electron-cache
+          ELECTRON_BUILDER_CACHE: ${{ runner.temp }}\electron-builder-cache
         run: npm run dist:win
 
       - name: Create GitHub Release

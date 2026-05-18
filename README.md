@@ -1,22 +1,64 @@
 # Prompt Brief Builder
 
-把模糊需求整理成可直接交给 AI Agent 执行的任务 Brief。
+Windows 桌面端 AI 需求描述优化器。它会先让 AI 追问关键缺口，再把原始想法、补充回答、范围、交付物和验收标准整理成可直接交给 Codex、Cursor、Claude Code、ChatGPT 等 Agent 的 Markdown Brief。
 
-在线使用：
+## 当前定位
 
-```text
-https://wty-bot.github.io/prompt-brief-builder/
+本项目主入口已经从 GitHub Pages 纯前端工具转为 Electron 桌面端 App。
+
+这样做的原因很直接：很多 OpenAI-compatible 服务商不允许浏览器跨域直连，纯 Web 版容易遇到 CORS 或 `Failed to fetch`。桌面端把模型请求放到 Electron 主进程中处理，普通用户填写自己的 `Base URL`、`API Key` 和 `Model` 后更容易直接可用。
+
+## 功能
+
+- 阶段式桌面工作台：连接模型、输入需求、澄清问题、生成 Brief、回看历史。
+- OpenAI-compatible Chat Completions 协议。
+- 服务商预设：OpenAI、DeepSeek、OpenRouter、DashScope/通义、Moonshot/Kimi、自定义。
+- API Key 默认不保存；用户主动点击后才用 Electron `safeStorage` 加密保存到本机。
+- 本地历史会话：保存原始需求、澄清问题、回答、最终 Prompt、优化说明和诊断信息。
+- 请求诊断：展示 endpoint、状态码、耗时、服务商识别、响应预览和修复建议。
+- 复制最终 Prompt、复制诊断、导出历史 Markdown。
+
+## 本地开发
+
+安装依赖：
+
+```bash
+npm install
 ```
 
-## 直接使用
+启动桌面端开发模式：
 
-1. 打开在线地址。
-2. 展开“连接模型”，填写 `Base URL`、`API Key`、`Model`。
-3. 点击“测试连接”。
-4. 输入你的原始需求。
-5. 点击“生成澄清问题”。
-6. 回答或跳过 AI 提出的问题。
-7. 点击“生成最终 Prompt”，复制结果给 Codex、Cursor、Claude Code、ChatGPT 等 Agent。
+```bash
+npm run dev:desktop
+```
+
+只启动 Vite Web 预览：
+
+```bash
+npm run dev
+```
+
+注意：当前主要功能依赖 Electron 主进程。单独打开 Web 预览时，页面会提示请使用桌面端启动。
+
+## 构建与打包
+
+构建 renderer 和 Electron 主进程：
+
+```bash
+npm run build
+```
+
+生成 Windows NSIS 安装包：
+
+```bash
+npm run dist:win
+```
+
+完整检查：
+
+```bash
+npm run check
+```
 
 ## API 怎么填
 
@@ -27,75 +69,34 @@ POST {Base URL}/chat/completions
 Authorization: Bearer {API Key}
 ```
 
-常见填写方式：
+常见示例：
 
 ```text
 Base URL: https://api.openai.com/v1
 Model: gpt-4o-mini
 ```
 
-如果你使用第三方中转、模型网关或本地代理，请填写它提供的 OpenAI-compatible `Base URL` 和模型名。
+如果你使用第三方中转、模型网关或本地代理，请选择“自定义”，再填写它提供的 OpenAI-compatible `Base URL` 和模型名。
 
-页面会显示请求诊断信息，包括 endpoint、状态码、耗时、响应预览和修复建议。连接失败时，优先查看“请求诊断”面板。
+## 隐私与本地数据
 
-## 隐私说明
-
-- API Key 默认只存在当前浏览器页面内存中。
-- 默认不会把 API Key 写入 `localStorage`。
-- 勾选“记住非敏感配置”时，只保存 `Base URL`、`Model`、`Temperature`。
-- 原始需求、回答和生成结果默认不做云端存储。
-
-## 浏览器直连限制
-
-本项目是纯前端应用，请求直接从浏览器发出。
-
-如果服务商不允许浏览器跨域调用，会出现 CORS 或 `Failed to fetch`。这不是 API Key 一定错误，而是服务商可能要求通过后端代理访问。
-
-解决方式：
-
-- 使用支持浏览器直连的 OpenAI-compatible 服务。
-- 自行加一层代理。
-- 后续版本可扩展 Cloudflare Worker / Vercel 代理模式。
-
-## 本地开发
-
-```bash
-npm install
-npm run dev
-```
-
-构建：
-
-```bash
-npm run build
-```
-
-完整检查：
-
-```bash
-npm run check
-```
-
-## 部署
-
-项目已配置 GitHub Pages workflow。
-
-上传到 GitHub 后，在仓库中设置：
-
-```text
-Settings -> Pages -> Source -> GitHub Actions
-```
-
-推送到 `main` 后会自动构建并部署。
+- API Key 默认只存在当前会话输入框中。
+- 点击“安全保存 Key”后，桌面端会通过 Electron `safeStorage` 加密保存。
+- 界面不会回显已保存 API Key 明文。
+- 非敏感配置会保存为本地 JSON，包括 `Base URL`、`Model`、`Temperature` 和服务商预设。
+- 历史会话保存到 Electron 的 `userData` 目录，不上传云端。
+- 当前版本没有账号系统、云同步、数据库服务或自动更新。
 
 ## 技术栈
 
+- Electron
 - Vite
 - React
 - TypeScript
 - Tailwind CSS
 - Vitest
+- electron-builder
 
 ## 相关文档
 
-详细项目规划见 [PROJECT_PLAN.md](./PROJECT_PLAN.md)。
+历史 Web 版规划见 [PROJECT_PLAN.md](./PROJECT_PLAN.md)。桌面端后续应以当前 README 和源码结构为准。

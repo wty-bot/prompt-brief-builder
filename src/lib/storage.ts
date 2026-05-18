@@ -1,8 +1,12 @@
 import type { ApiConfig } from "../types/app";
+import { getTemperaturePreset } from "../shared/temperature";
 
 const STORAGE_KEY = "ai-requirement-optimizer-config";
 
-type StoredConfig = Pick<ApiConfig, "baseUrl" | "model" | "temperature" | "rememberConfig">;
+type StoredConfig = Pick<
+  ApiConfig,
+  "baseUrl" | "model" | "temperature" | "temperaturePreset" | "rememberConfig"
+>;
 
 export function loadStoredConfig(): StoredConfig | null {
   const raw = window.localStorage.getItem(STORAGE_KEY);
@@ -11,7 +15,19 @@ export function loadStoredConfig(): StoredConfig | null {
   }
 
   try {
-    return JSON.parse(raw) as StoredConfig;
+    const parsed = JSON.parse(raw) as Partial<StoredConfig>;
+    if (!parsed.baseUrl || !parsed.model || typeof parsed.temperature !== "number") {
+      return null;
+    }
+
+    return {
+      baseUrl: parsed.baseUrl,
+      model: parsed.model,
+      temperature: parsed.temperature,
+      temperaturePreset:
+        parsed.temperaturePreset ?? getTemperaturePreset(parsed.temperature),
+      rememberConfig: Boolean(parsed.rememberConfig),
+    };
   } catch {
     return null;
   }
@@ -22,6 +38,7 @@ export function saveStoredConfig(config: ApiConfig) {
     baseUrl: config.baseUrl,
     model: config.model,
     temperature: config.temperature,
+    temperaturePreset: config.temperaturePreset,
     rememberConfig: config.rememberConfig,
   };
 

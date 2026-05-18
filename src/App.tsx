@@ -38,6 +38,11 @@ import {
   parseOptimizedPromptResult,
 } from "./lib/responseParsers";
 import { providerPresets } from "./shared/providerPresets";
+import {
+  getTemperatureValue,
+  temperaturePresets,
+  type TemperaturePreset,
+} from "./shared/temperature";
 import type {
   ApiDiagnostics,
   AppPhase,
@@ -61,6 +66,7 @@ const defaultApiConfig: DesktopApiConfig = {
   apiKey: "",
   model: defaultPreset.model,
   temperature: 0.4,
+  temperaturePreset: "medium",
   rememberConfig: false,
   providerPresetId: defaultPreset.id,
 };
@@ -211,6 +217,7 @@ function App() {
       baseUrl: nextConfig.baseUrl,
       model: nextConfig.model,
       temperature: nextConfig.temperature,
+      temperaturePreset: nextConfig.temperaturePreset,
       rememberConfig: nextConfig.rememberConfig,
       providerPresetId: nextConfig.providerPresetId,
     };
@@ -736,7 +743,7 @@ function ConnectionStage({
               />
             </label>
 
-            <div className="grid gap-4 sm:grid-cols-[1fr_160px]">
+            <div className="grid gap-4">
               <label className="grid gap-2">
                 <span className="text-sm font-semibold text-ink">Model</span>
                 <input
@@ -747,20 +754,16 @@ function ConnectionStage({
                 />
               </label>
 
-              <label className="grid gap-2">
-                <span className="text-sm font-semibold text-ink">Temperature</span>
-                <input
-                  type="number"
-                  min="0"
-                  max="1"
-                  step="0.1"
-                  value={value.temperature}
-                  onChange={(event) =>
-                    onChange({ ...value, temperature: Number(event.target.value || 0) })
-                  }
-                  className="field"
-                />
-              </label>
+              <TemperaturePresetControl
+                value={value.temperaturePreset}
+                onChange={(preset) =>
+                  onChange({
+                    ...value,
+                    temperaturePreset: preset,
+                    temperature: getTemperatureValue(preset),
+                  })
+                }
+              />
             </div>
 
             <label className="flex items-start gap-3 rounded-2xl border border-ink/8 bg-vellum/65 p-4">
@@ -864,6 +867,47 @@ function HistoryStage({
         )}
       </div>
     </section>
+  );
+}
+
+function TemperaturePresetControl({
+  value,
+  onChange,
+}: {
+  value: TemperaturePreset;
+  onChange: (value: TemperaturePreset) => void;
+}) {
+  const selected =
+    temperaturePresets.find((preset) => preset.id === value) ?? temperaturePresets[1];
+
+  return (
+    <div className="grid gap-2">
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-sm font-semibold text-ink">输出发散度</span>
+        <span className="rounded-full border border-ink/10 bg-vellum px-3 py-1 text-xs font-semibold text-ink/58">
+          {selected.label}
+        </span>
+      </div>
+      <div className="grid gap-2 sm:grid-cols-4">
+        {temperaturePresets.map((preset) => (
+          <button
+            type="button"
+            key={preset.id}
+            onClick={() => onChange(preset.id)}
+            className={`min-h-11 rounded-2xl border px-3 py-2 text-sm font-semibold transition ${
+              value === preset.id
+                ? "border-moss bg-moss text-white shadow-soft"
+                : "border-ink/10 bg-vellum/70 text-ink/68 hover:border-moss/35 hover:text-ink"
+            }`}
+          >
+            {preset.label}
+          </button>
+        ))}
+      </div>
+      <p className="text-xs leading-5 text-ink/52">
+        {selected.hint}。底层会映射为 temperature={selected.value}。
+      </p>
+    </div>
   );
 }
 

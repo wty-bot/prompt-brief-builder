@@ -22,7 +22,9 @@ import {
   buildRequestBody,
   createDiagnostics,
   createSuggestion,
+  extractResponseContent,
   isCapabilityIssue,
+  suggestVersionedBaseUrl,
   type ChatCompletionResponse,
   type ChatMessage,
 } from "../src/shared/openaiCore.js";
@@ -129,6 +131,7 @@ async function resolveApiConfig(config: DesktopApiConfig): Promise<ApiConfig> {
     apiKey,
     model: config.model,
     temperature: config.temperature,
+    temperaturePreset: config.temperaturePreset,
     rememberConfig: config.rememberConfig,
   };
 }
@@ -196,7 +199,7 @@ async function requestOnce(
       throw createTransportError(message, diagnostics);
     }
 
-    const content = payload?.choices?.[0]?.message?.content?.trim();
+    const content = extractResponseContent(payload);
     if (!content) {
       const diagnostics = createDiagnostics({
         context: options.context,
@@ -265,6 +268,19 @@ async function requestWithFallback(
   } catch (caught) {
     if (!(caught instanceof ApiRequestErrorClass)) {
       throw caught;
+    }
+
+    if (caught.diagnostics.transport === "parse") {
+      const versionedBaseUrl = suggestVersionedBaseUrl(config.baseUrl);
+      if (versionedBaseUrl) {
+        return requestWithFallback(
+          {
+            ...config,
+            baseUrl: versionedBaseUrl,
+          },
+          options,
+        );
+      }
     }
 
     if (

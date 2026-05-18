@@ -13,6 +13,7 @@ describe("storage", () => {
       apiKey: "secret-key",
       model: "test-model",
       temperature: 0.4,
+      temperaturePreset: "medium",
       rememberConfig: true,
     });
 
@@ -21,6 +22,7 @@ describe("storage", () => {
       baseUrl: "https://api.example.com/v1",
       model: "test-model",
       temperature: 0.4,
+      temperaturePreset: "medium",
       rememberConfig: true,
     });
 
@@ -33,6 +35,7 @@ describe("storage", () => {
       apiKey: "secret-key",
       model: "test-model",
       temperature: 0.4,
+      temperaturePreset: "medium",
       rememberConfig: true,
     });
 

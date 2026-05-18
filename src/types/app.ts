@@ -1,8 +1,11 @@
+import type { TemperaturePreset } from "../shared/temperature.js";
+
 export type ApiConfig = {
   baseUrl: string;
   apiKey: string;
   model: string;
   temperature: number;
+  temperaturePreset: TemperaturePreset;
   rememberConfig: boolean;
 };
 

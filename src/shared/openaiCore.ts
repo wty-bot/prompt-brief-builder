@@ -12,10 +12,27 @@ export type ChatMessage = {
 
 export type ChatCompletionResponse = {
   choices?: Array<{
+    text?: string;
     message?: {
-      content?: string;
+      content?:
+        | string
+        | null
+        | Array<
+            | string
+            | {
+                type?: string;
+                text?: string;
+                content?: string;
+              }
+          >;
+      text?: string;
+      output_text?: string;
+      reasoning?: string;
+      reasoning_content?: string;
     };
   }>;
+  output_text?: string;
+  text?: string;
   error?: {
     message?: string;
   };
@@ -23,6 +40,14 @@ export type ChatCompletionResponse = {
 
 export function buildEndpoint(baseUrl: string) {
   return `${baseUrl.replace(/\/+$/, "")}/chat/completions`;
+}
+
+export function suggestVersionedBaseUrl(baseUrl: string) {
+  const trimmed = baseUrl.replace(/\/+$/, "");
+  if (/\/v\d+$/i.test(trimmed) || /\/v\d+\//i.test(trimmed) || /\/chat\/completions$/i.test(trimmed)) {
+    return null;
+  }
+  return `${trimmed}/v1`;
 }
 
 export function createProviderHint(baseUrl: string) {
@@ -107,6 +132,39 @@ export function buildRequestBody(
         }
       : {}),
   };
+}
+
+export function extractResponseContent(payload: ChatCompletionResponse | null) {
+  const choice = payload?.choices?.[0];
+  const message = choice?.message;
+  const content = message?.content;
+
+  if (typeof content === "string") {
+    return content.trim();
+  }
+
+  if (Array.isArray(content)) {
+    const text = content
+      .map((part) => {
+        if (typeof part === "string") return part;
+        return part.text ?? part.content ?? "";
+      })
+      .join("")
+      .trim();
+    if (text) return text;
+  }
+
+  const fallbacks = [
+    message?.output_text,
+    message?.text,
+    choice?.text,
+    payload?.output_text,
+    payload?.text,
+    message?.reasoning_content,
+    message?.reasoning,
+  ];
+
+  return fallbacks.find((value) => typeof value === "string" && value.trim())?.trim() ?? "";
 }
 
 export function isCapabilityIssue(status?: number, responsePreview?: string) {

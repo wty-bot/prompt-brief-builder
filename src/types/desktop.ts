@@ -27,7 +27,7 @@ export type ProviderPreset = {
 
 export type DesktopSettings = Pick<
   ApiConfig,
-  "baseUrl" | "model" | "temperature" | "rememberConfig"
+  "baseUrl" | "model" | "temperature" | "temperaturePreset" | "rememberConfig"
 > & {
   providerPresetId: ProviderPresetId;
 };

@@ -5,7 +5,9 @@ import {
   buildRequestBody,
   createProviderHint,
   createSuggestion,
+  extractResponseContent,
   isCapabilityIssue,
+  suggestVersionedBaseUrl,
 } from "./openaiCore";
 
 describe("openaiCore", () => {
@@ -46,5 +48,44 @@ describe("openaiCore", () => {
   it("recognizes response_format compatibility failures", () => {
     expect(isCapabilityIssue(400, "unknown field response_format")).toBe(true);
     expect(isCapabilityIssue(401, "unauthorized")).toBe(false);
+  });
+
+  it("suggests /v1 fallback for root-compatible endpoints", () => {
+    expect(suggestVersionedBaseUrl("https://ai.example.com")).toBe(
+      "https://ai.example.com/v1",
+    );
+    expect(suggestVersionedBaseUrl("https://ai.example.com/v1")).toBeNull();
+  });
+
+  it("extracts content from text parts", () => {
+    expect(
+      extractResponseContent({
+        choices: [
+          {
+            message: {
+              content: [
+                { type: "text", text: "hello" },
+                { type: "text", text: " world" },
+              ],
+            },
+          },
+        ],
+      }),
+    ).toBe("hello world");
+  });
+
+  it("extracts fallback text fields", () => {
+    expect(
+      extractResponseContent({
+        choices: [
+          {
+            message: {
+              content: null,
+              output_text: "fallback text",
+            },
+          },
+        ],
+      }),
+    ).toBe("fallback text");
   });
 });

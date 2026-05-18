@@ -10,7 +10,9 @@ import {
   buildRequestBody,
   createDiagnostics,
   createSuggestion,
+  extractResponseContent,
   isCapabilityIssue,
+  suggestVersionedBaseUrl,
   type ChatCompletionResponse,
   type ChatMessage,
 } from "../shared/openaiCore";
@@ -84,7 +86,7 @@ async function requestOnce(
       throw createTransportError(message, diagnostics);
     }
 
-    const content = payload?.choices?.[0]?.message?.content?.trim();
+    const content = extractResponseContent(payload);
     if (!content) {
       const diagnostics = createDiagnostics({
         context: options.context,
@@ -155,6 +157,19 @@ async function requestWithFallback(
   } catch (error) {
     if (!(error instanceof ApiRequestErrorClass)) {
       throw error;
+    }
+
+    if (error.diagnostics.transport === "parse") {
+      const versionedBaseUrl = suggestVersionedBaseUrl(config.baseUrl);
+      if (versionedBaseUrl) {
+        return requestWithFallback(
+          {
+            ...config,
+            baseUrl: versionedBaseUrl,
+          },
+          options,
+        );
+      }
     }
 
     if (

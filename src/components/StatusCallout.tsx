@@ -1,10 +1,10 @@
 type StatusTone = "neutral" | "success" | "warning" | "error";
 
 const toneClasses: Record<StatusTone, string> = {
-  neutral: "border-ink/10 bg-vellum/80 text-ink/80",
-  success: "border-moss/20 bg-moss/8 text-ink",
+  neutral: "border-black/10 bg-white/90 text-ink/80",
+  success: "border-[#0071e3]/20 bg-[#0071e3]/10 text-ink",
   warning: "border-amberline/25 bg-amberline/10 text-ink",
-  error: "border-oxblood/25 bg-oxblood/8 text-oxblood",
+  error: "border-oxblood/25 bg-oxblood/10 text-oxblood",
 };
 
 type StatusCalloutProps = {
@@ -19,10 +19,10 @@ export function StatusCallout({
   description,
 }: StatusCalloutProps) {
   return (
-    <div className={`relative overflow-hidden rounded-[24px] border p-4 shadow-insetline backdrop-blur ${toneClasses[tone]}`}>
+    <div className={`relative overflow-hidden rounded-2xl border p-4 shadow-sm backdrop-blur ${toneClasses[tone]}`}>
       <div className="absolute inset-y-0 left-0 w-1 bg-current opacity-25" />
-      <p className="text-sm font-semibold">{title}</p>
-      <p className="mt-1 text-sm leading-6 opacity-78">{description}</p>
+      <p className="text-sm font-medium">{title}</p>
+      <p className="mt-1 text-sm leading-6 opacity-80">{description}</p>
     </div>
   );
 }

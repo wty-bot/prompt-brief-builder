@@ -12,6 +12,8 @@ import type {
   DesktopSettings,
   HistorySession,
   LlmGenerateRequest,
+  LlmStreamEvent,
+  LlmStreamRequest,
 } from "../src/types/desktop.js";
 
 type IpcSuccess<T> = {
@@ -47,6 +49,15 @@ const desktopApi: DesktopApi = {
   },
   llm: {
     generate: (request: LlmGenerateRequest) => invokeResult("llm:generate", request),
+    startStream: (request: LlmStreamRequest) => invokeResult("llm:stream-start", request),
+    cancelStream: (taskId: string) => ipcRenderer.invoke("llm:stream-cancel", taskId),
+    onStreamEvent: (listener: (event: LlmStreamEvent) => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, streamEvent: LlmStreamEvent) => {
+        listener(streamEvent);
+      };
+      ipcRenderer.on("llm:stream-event", handler);
+      return () => ipcRenderer.removeListener("llm:stream-event", handler);
+    },
   },
   settings: {
     load: () => ipcRenderer.invoke("settings:load"),

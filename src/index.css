@@ -3,12 +3,13 @@
 @tailwind utilities;
 
 :root {
-  color: #161a16;
-  background: #f4eee2;
+  color: #1d1d1f;
+  background: #f5f5f7;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI", sans-serif;
 }
 
 html {
@@ -20,11 +21,10 @@ body {
   min-width: 320px;
   min-height: 100vh;
   background:
-    radial-gradient(circle at 12% 8%, rgba(13, 148, 136, 0.18), transparent 26rem),
-    radial-gradient(circle at 88% 12%, rgba(217, 138, 27, 0.16), transparent 24rem),
-    radial-gradient(circle at 50% 100%, rgba(22, 26, 22, 0.1), transparent 32rem),
-    linear-gradient(135deg, rgba(255,255,255,0.42), rgba(244,238,226,0.78)),
-    #f4eee2;
+    radial-gradient(circle at 10% 8%, rgba(0, 113, 227, 0.08), transparent 18rem),
+    radial-gradient(circle at 90% 0%, rgba(0, 113, 227, 0.05), transparent 14rem),
+    linear-gradient(180deg, rgba(255,255,255,0.9), rgba(245,245,247,0.98)),
+    #f5f5f7;
 }
 
 * {
@@ -38,36 +38,36 @@ textarea {
 }
 
 ::selection {
-  background: rgba(15, 118, 110, 0.18);
+  background: rgba(0, 113, 227, 0.18);
 }
 
 @layer components {
   .panel {
-    @apply rounded-[32px] border border-ink/10 bg-vellum/80 shadow-soft shadow-insetline backdrop-blur-xl;
+    @apply rounded-[20px] border border-black/10 bg-white/90 shadow-sm backdrop-blur-xl;
   }
 
   .panel-dark {
-    @apply rounded-[36px] border border-white/10 bg-ink text-vellum shadow-lift shadow-insetline;
+    @apply rounded-[20px] border border-white/10 bg-ink text-vellum shadow-lift shadow-insetline;
   }
 
   .eyebrow {
-    @apply text-xs font-semibold uppercase tracking-[0.22em] text-moss;
+    @apply text-[11px] font-medium uppercase tracking-[0.16em] text-ink/50;
   }
 
   .field {
-    @apply w-full rounded-2xl border border-ink/10 bg-white/70 px-4 py-3 text-sm leading-6 text-ink outline-none transition placeholder:text-ink/35 focus:border-moss focus:bg-white focus:ring-4 focus:ring-moss/10;
+    @apply w-full rounded-xl border border-black/10 bg-white px-3.5 py-2.5 text-[15px] leading-6 text-ink outline-none transition placeholder:text-ink/40 focus:border-[#0071e3] focus:ring-4 focus:ring-[#0071e3]/20;
   }
 
   .primary-button {
-    @apply inline-flex min-h-11 items-center justify-center rounded-full border border-ink bg-ink px-5 py-3 text-sm font-semibold text-vellum shadow-soft transition hover:-translate-y-0.5 hover:bg-graphite disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-55;
+    @apply inline-flex min-h-10 items-center justify-center rounded-full border border-[#0071e3] bg-[#0071e3] px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-[#0a84ff] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-55;
   }
 
   .accent-button {
-    @apply inline-flex min-h-11 items-center justify-center rounded-full border border-moss bg-moss px-5 py-3 text-sm font-semibold text-white shadow-soft transition hover:-translate-y-0.5 hover:bg-deepmoss disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-55;
+    @apply inline-flex min-h-10 items-center justify-center rounded-full border border-black/10 bg-black/90 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-black disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-55;
   }
 
   .ghost-button {
-    @apply inline-flex min-h-11 items-center justify-center rounded-full border border-ink/10 bg-white/60 px-4 py-2 text-sm font-semibold text-ink transition hover:border-moss/40 hover:text-deepmoss disabled:cursor-not-allowed disabled:opacity-55;
+    @apply inline-flex min-h-10 items-center justify-center rounded-full border border-black/10 bg-white px-3.5 py-2 text-sm font-medium text-ink transition hover:border-black/20 hover:bg-[#f5f5f7] disabled:cursor-not-allowed disabled:opacity-55;
   }
 }
 

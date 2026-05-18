@@ -5,24 +5,24 @@ export default {
   theme: {
     extend: {
       colors: {
-        paper: "#F4EEE2",
-        vellum: "#FFF9EF",
-        ink: "#161A16",
-        graphite: "#2A302B",
-        moss: "#0D9488",
-        deepmoss: "#0F5F59",
-        amberline: "#D98A1B",
-        clay: "#E4D3B8",
-        oxblood: "#8A3B2F",
+        paper: "#F5F5F7",
+        vellum: "#FFFFFF",
+        ink: "#1D1D1F",
+        graphite: "#3A3A3C",
+        moss: "#0071E3",
+        deepmoss: "#0A84FF",
+        amberline: "#FF9500",
+        clay: "#E5E5EA",
+        oxblood: "#D92D20",
       },
       boxShadow: {
-        soft: "0 24px 60px rgba(22, 26, 22, 0.12)",
-        lift: "0 34px 90px rgba(22, 26, 22, 0.18)",
-        insetline: "inset 0 1px 0 rgba(255,255,255,0.48)",
+        soft: "0 8px 24px rgba(0, 0, 0, 0.06)",
+        lift: "0 18px 50px rgba(0, 0, 0, 0.12)",
+        insetline: "inset 0 1px 0 rgba(255,255,255,0.72)",
       },
       backgroundImage: {
         "paper-grid":
-          "linear-gradient(rgba(22,26,22,0.045) 1px, transparent 1px), linear-gradient(90deg, rgba(22,26,22,0.045) 1px, transparent 1px)",
+          "linear-gradient(rgba(29,29,31,0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(29,29,31,0.035) 1px, transparent 1px)",
       },
       keyframes: {
         "soft-rise": {
@@ -45,10 +45,10 @@ export default {
       },
       fontFamily: {
         sans: [
-          "ui-sans-serif",
-          "system-ui",
           "-apple-system",
           "BlinkMacSystemFont",
+          '"SF Pro Text"',
+          '"SF Pro Display"',
           "Segoe UI",
           "sans-serif",
         ],

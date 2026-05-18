@@ -16,6 +16,8 @@ import type {
   HistorySession,
   HistorySummary,
   LlmGenerateRequest,
+  LlmStreamEvent,
+  LlmStreamRequest,
 } from "../src/types/desktop.js";
 import {
   buildEndpoint,
@@ -57,6 +59,16 @@ type IpcFailure = {
     diagnostics?: ApiDiagnostics;
   };
 };
+
+const activeStreamControllers = new Map<
+  string,
+  {
+    controller: AbortController;
+    startedAt: number;
+    partialContent: string;
+    abortReason: "canceled" | "timeout" | "idle-timeout" | null;
+  }
+>();
 
 function getDataPaths() {
   const root = app.getPath("userData");
@@ -138,6 +150,80 @@ async function resolveApiConfig(config: DesktopApiConfig): Promise<ApiConfig> {
 
 function createTransportError(message: string, diagnostics: ApiDiagnostics) {
   return new ApiRequestErrorClass(message, diagnostics);
+}
+
+function getElapsedMs(startedAt: number) {
+  return Math.round(performance.now() - startedAt);
+}
+
+function sendStreamEvent(sender: Electron.WebContents, event: LlmStreamEvent) {
+  if (!sender.isDestroyed()) {
+    sender.send("llm:stream-event", event);
+  }
+}
+
+function extractStreamDelta(value: unknown) {
+  if (!value || typeof value !== "object") return "";
+  const payload = value as {
+    choices?: Array<{
+      delta?: {
+        content?: string | Array<{ text?: string; content?: string }>;
+      };
+      message?: {
+        content?: string;
+      };
+      text?: string;
+    }>;
+    output_text?: string;
+    text?: string;
+  };
+  const choice = payload.choices?.[0];
+  const deltaContent = choice?.delta?.content;
+  if (typeof deltaContent === "string") return deltaContent;
+  if (Array.isArray(deltaContent)) {
+    return deltaContent.map((part) => part.text ?? part.content ?? "").join("");
+  }
+  return choice?.message?.content ?? choice?.text ?? payload.output_text ?? payload.text ?? "";
+}
+
+function parseSseBuffer(buffer: string) {
+  const events: string[] = [];
+  const blocks = buffer.split(/\r?\n\r?\n/);
+  const rest = blocks.pop() ?? "";
+
+  for (const block of blocks) {
+    const data = block
+      .split(/\r?\n/)
+      .filter((line) => line.startsWith("data:"))
+      .map((line) => line.slice(5).trim())
+      .join("\n");
+    if (data) {
+      events.push(data);
+    }
+  }
+
+  return { events, rest };
+}
+
+function normalizeStreamContent(content: string) {
+  const trimmed = content.trim();
+  if (!trimmed) return "";
+
+  try {
+    const payload = JSON.parse(trimmed) as ChatCompletionResponse;
+    const extracted = extractResponseContent(payload);
+    return extracted || trimmed;
+  } catch {
+    return trimmed;
+  }
+}
+
+function isHtmlResponse(contentType: string, text: string) {
+  return (
+    contentType.includes("text/html") ||
+    /^\s*<!doctype html/i.test(text) ||
+    /^\s*<html[\s>]/i.test(text)
+  );
 }
 
 async function requestOnce(
@@ -302,6 +388,366 @@ async function requestWithFallback(
   }
 }
 
+async function runStreamingRequest(
+  sender: Electron.WebContents,
+  request: LlmStreamRequest,
+  config: ApiConfig,
+) {
+  const startedAt = performance.now();
+  let activeBaseUrl = config.baseUrl;
+  const controller = new AbortController();
+  const streamState = {
+    controller,
+    startedAt,
+    partialContent: "",
+    abortReason: null as "canceled" | "timeout" | "idle-timeout" | null,
+  };
+  activeStreamControllers.set(request.taskId, streamState);
+
+  let idleTimer: NodeJS.Timeout | null = null;
+  const totalTimer = setTimeout(() => {
+    streamState.abortReason = "timeout";
+    controller.abort();
+  }, request.timeoutMs);
+  const resetIdleTimer = () => {
+    if (idleTimer) clearTimeout(idleTimer);
+    idleTimer = setTimeout(() => {
+      streamState.abortReason = "idle-timeout";
+      controller.abort();
+    }, request.idleTimeoutMs);
+  };
+
+  try {
+    sendStreamEvent(sender, {
+      taskId: request.taskId,
+      type: "started",
+      context: request.context,
+      startedAt: new Date().toISOString(),
+      streamEnabled: true,
+      usedJsonMode: false,
+    });
+    sendStreamEvent(sender, {
+      taskId: request.taskId,
+      type: "phase",
+      phase: "connecting",
+      message: "正在连接模型服务...",
+      elapsedMs: getElapsedMs(startedAt),
+    });
+
+    const fetchStream = (baseUrl: string) =>
+      fetch(buildEndpoint(baseUrl), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${config.apiKey}`,
+      },
+      body: JSON.stringify({
+        ...buildRequestBody(
+          config,
+          [
+            { role: "system", content: request.systemPrompt },
+            { role: "user", content: request.userPrompt },
+          ],
+          false,
+        ),
+        stream: true,
+      }),
+      signal: controller.signal,
+      });
+
+    resetIdleTimer();
+    let response = await fetchStream(activeBaseUrl);
+
+    sendStreamEvent(sender, {
+      taskId: request.taskId,
+      type: "phase",
+      phase: "waiting",
+      message: "模型已响应，正在等待内容...",
+      elapsedMs: getElapsedMs(startedAt),
+    });
+
+    const initialContentType = response.headers.get("content-type")?.toLowerCase() ?? "";
+    if (response.ok && initialContentType.includes("text/html")) {
+      const text = await response.text();
+      const versionedBaseUrl = suggestVersionedBaseUrl(activeBaseUrl);
+      if (versionedBaseUrl) {
+        activeBaseUrl = versionedBaseUrl;
+        sendStreamEvent(sender, {
+          taskId: request.taskId,
+          type: "phase",
+          phase: "connecting",
+          message: "当前 Base URL 返回网页，正在自动尝试 /v1 路径...",
+          elapsedMs: getElapsedMs(startedAt),
+        });
+        response = await fetchStream(activeBaseUrl);
+      } else {
+        const diagnostics = createDiagnostics({
+          context: request.context,
+          baseUrl: activeBaseUrl,
+          elapsedMs: getElapsedMs(startedAt),
+          transport: "parse",
+          usedJsonMode: false,
+          status: response.status,
+          statusText: response.statusText,
+          responsePreview: text.slice(0, 500),
+        });
+        sendStreamEvent(sender, {
+          taskId: request.taskId,
+          type: "error",
+          message: "服务返回的是网页，不是模型 API 响应。请检查 Base URL 是否应包含 /v1。",
+          diagnostics,
+          partialContent: streamState.partialContent,
+          elapsedMs: getElapsedMs(startedAt),
+        });
+        return;
+      }
+    }
+
+    if (!response.ok) {
+      const text = await response.text();
+      const versionedBaseUrl = suggestVersionedBaseUrl(activeBaseUrl);
+      if ((response.status === 404 || isHtmlResponse(response.headers.get("content-type")?.toLowerCase() ?? "", text)) && versionedBaseUrl) {
+        activeBaseUrl = versionedBaseUrl;
+        sendStreamEvent(sender, {
+          taskId: request.taskId,
+          type: "phase",
+          phase: "connecting",
+          message: "当前路径不可用，正在自动尝试 /v1 路径...",
+          elapsedMs: getElapsedMs(startedAt),
+        });
+        response = await fetchStream(activeBaseUrl);
+      } else {
+        const diagnostics = createDiagnostics({
+          context: request.context,
+          baseUrl: activeBaseUrl,
+          elapsedMs: getElapsedMs(startedAt),
+          transport: "http",
+          usedJsonMode: false,
+          status: response.status,
+          statusText: response.statusText,
+          responsePreview: text.slice(0, 500),
+        });
+        sendStreamEvent(sender, {
+          taskId: request.taskId,
+          type: "error",
+          message: `${response.status} ${response.statusText || "请求失败"}`.trim(),
+          diagnostics,
+          partialContent: streamState.partialContent,
+          elapsedMs: getElapsedMs(startedAt),
+        });
+        return;
+      }
+    }
+
+    if (!response.ok) {
+      const text = await response.text();
+      const diagnostics = createDiagnostics({
+        context: request.context,
+        baseUrl: activeBaseUrl,
+        elapsedMs: getElapsedMs(startedAt),
+        transport: "http",
+        usedJsonMode: false,
+        status: response.status,
+        statusText: response.statusText,
+        responsePreview: text.slice(0, 500),
+      });
+      sendStreamEvent(sender, {
+        taskId: request.taskId,
+        type: "error",
+        message: `${response.status} ${response.statusText || "请求失败"}`.trim(),
+        diagnostics,
+        partialContent: streamState.partialContent,
+        elapsedMs: getElapsedMs(startedAt),
+      });
+      return;
+    }
+
+    const responseContentType = response.headers.get("content-type")?.toLowerCase() ?? "";
+    if (responseContentType.includes("text/html")) {
+      const text = await response.text();
+      const diagnostics = createDiagnostics({
+        context: request.context,
+        baseUrl: activeBaseUrl,
+        elapsedMs: getElapsedMs(startedAt),
+        transport: "parse",
+        usedJsonMode: false,
+        status: response.status,
+        statusText: response.statusText,
+        responsePreview: text.slice(0, 500),
+      });
+      sendStreamEvent(sender, {
+        taskId: request.taskId,
+        type: "error",
+        message: "服务返回的是网页，不是模型 API 响应。请检查 Base URL。",
+        diagnostics,
+        partialContent: streamState.partialContent,
+        elapsedMs: getElapsedMs(startedAt),
+      });
+      return;
+    }
+
+    if (!response.body) {
+      const text = await response.text();
+      streamState.partialContent = text;
+      sendStreamEvent(sender, {
+        taskId: request.taskId,
+        type: "chunk",
+        delta: text,
+        content: text,
+        elapsedMs: getElapsedMs(startedAt),
+      });
+    } else {
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      const contentType = response.headers.get("content-type")?.toLowerCase() ?? "";
+      const isEventStream = contentType.includes("text/event-stream");
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        resetIdleTimer();
+
+        const raw = decoder.decode(value, { stream: true });
+        buffer += raw;
+        const { events, rest } = parseSseBuffer(buffer);
+        buffer = rest;
+        const looksLikeSse = isEventStream || buffer.trimStart().startsWith("data:");
+
+        if (!looksLikeSse && !events.length && raw.trim()) {
+          streamState.partialContent += raw;
+          buffer = "";
+          sendStreamEvent(sender, {
+            taskId: request.taskId,
+            type: "chunk",
+            delta: raw,
+            content: streamState.partialContent,
+            elapsedMs: getElapsedMs(startedAt),
+          });
+          continue;
+        }
+
+        for (const eventText of events) {
+          if (eventText === "[DONE]") continue;
+          try {
+            const payload = JSON.parse(eventText) as unknown;
+            const delta = extractStreamDelta(payload);
+            if (!delta) continue;
+            streamState.partialContent += delta;
+            sendStreamEvent(sender, {
+              taskId: request.taskId,
+              type: "chunk",
+              delta,
+              content: streamState.partialContent,
+              elapsedMs: getElapsedMs(startedAt),
+            });
+          } catch {
+            streamState.partialContent += eventText;
+            sendStreamEvent(sender, {
+              taskId: request.taskId,
+              type: "chunk",
+              delta: eventText,
+              content: streamState.partialContent,
+              elapsedMs: getElapsedMs(startedAt),
+            });
+          }
+        }
+      }
+
+      if ((isEventStream || buffer.trimStart().startsWith("data:")) && buffer.trim()) {
+        const { events } = parseSseBuffer(`${buffer}\n\n`);
+        for (const eventText of events) {
+          if (eventText === "[DONE]") continue;
+          try {
+            const payload = JSON.parse(eventText) as unknown;
+            const delta = extractStreamDelta(payload);
+            if (!delta) continue;
+            streamState.partialContent += delta;
+            sendStreamEvent(sender, {
+              taskId: request.taskId,
+              type: "chunk",
+              delta,
+              content: streamState.partialContent,
+              elapsedMs: getElapsedMs(startedAt),
+            });
+          } catch {
+            streamState.partialContent += eventText;
+          }
+        }
+      } else if (buffer.trim()) {
+        streamState.partialContent += buffer;
+      }
+    }
+
+    streamState.partialContent = normalizeStreamContent(streamState.partialContent);
+
+    sendStreamEvent(sender, {
+      taskId: request.taskId,
+      type: "phase",
+      phase: "parsing",
+      message: "内容接收完成，正在解析...",
+      elapsedMs: getElapsedMs(startedAt),
+    });
+
+    const diagnostics = createDiagnostics({
+      context: request.context,
+      baseUrl: activeBaseUrl,
+      elapsedMs: getElapsedMs(startedAt),
+      transport: "ok",
+      usedJsonMode: false,
+      status: response.status,
+      statusText: response.statusText,
+      responsePreview: streamState.partialContent.slice(0, 500),
+    });
+    sendStreamEvent(sender, {
+      taskId: request.taskId,
+      type: "complete",
+      content: streamState.partialContent,
+      diagnostics,
+      elapsedMs: getElapsedMs(startedAt),
+    });
+  } catch (error) {
+    const reason = streamState.abortReason;
+    if (reason === "canceled") {
+      sendStreamEvent(sender, {
+        taskId: request.taskId,
+        type: "canceled",
+        partialContent: streamState.partialContent,
+        elapsedMs: getElapsedMs(startedAt),
+      });
+      return;
+    }
+
+    const diagnostics = createDiagnostics({
+      context: request.context,
+      baseUrl: activeBaseUrl,
+      elapsedMs: getElapsedMs(startedAt),
+      transport: reason ? "timeout" : "network",
+      usedJsonMode: false,
+      responsePreview: streamState.partialContent.slice(0, 500),
+    });
+    sendStreamEvent(sender, {
+      taskId: request.taskId,
+      type: "error",
+      message:
+        reason === "idle-timeout"
+          ? "模型长时间没有继续返回内容。"
+          : reason === "timeout"
+            ? "请求超过最长等待时间。"
+            : error instanceof Error
+              ? error.message
+              : "请求失败",
+      diagnostics,
+      partialContent: streamState.partialContent,
+      elapsedMs: getElapsedMs(startedAt),
+    });
+  } finally {
+    if (idleTimer) clearTimeout(idleTimer);
+    clearTimeout(totalTimer);
+    activeStreamControllers.delete(request.taskId);
+  }
+}
+
 function historyPath(id: string) {
   const safeId = id.replace(/[^a-zA-Z0-9_-]/g, "");
   return path.join(getDataPaths().historyDir, `${safeId}.json`);
@@ -361,6 +807,22 @@ async function registerIpc() {
         userPrompt: request.userPrompt,
       });
     });
+  });
+
+  ipcMain.handle("llm:stream-start", async (event, request: LlmStreamRequest) => {
+    return withIpcResult(async () => {
+      const resolved = await resolveApiConfig(request.config);
+      void runStreamingRequest(event.sender, request, resolved);
+      return { taskId: request.taskId };
+    });
+  });
+
+  ipcMain.handle("llm:stream-cancel", async (_event, taskId: string) => {
+    const active = activeStreamControllers.get(taskId);
+    if (active) {
+      active.abortReason = "canceled";
+      active.controller.abort();
+    }
   });
 
   ipcMain.handle("settings:load", async () => {

@@ -9,7 +9,17 @@ export type ApiConfig = {
   rememberConfig: boolean;
 };
 
-export type ApiCallContext = "connection-test" | "clarify-questions" | "compose-brief";
+export type WorkflowMode = "format-optimization" | "brainstorming";
+
+export type PromptOutputKind = "lightweight" | "brief";
+
+export type ApiCallContext =
+  | "connection-test"
+  | "format-optimization"
+  | "clarify-questions"
+  | "brainstorm-turn"
+  | "brainstorm-finalize"
+  | "compose-brief";
 
 export type ApiTransportState =
   | "ok"
@@ -63,6 +73,33 @@ export type ClarifyingAnswer = {
 export type OptimizedPromptResult = {
   finalPromptMarkdown: string;
   improvementNotesMarkdown: string;
+  mode?: WorkflowMode;
+  outputKind?: PromptOutputKind;
+  originalText?: string;
+  sourceSummaryMarkdown?: string;
+  detectedScenario?: string;
+};
+
+export type FormatOptimizationResult = {
+  optimizedPromptMarkdown: string;
+  noteMarkdown: string;
+  detectedScenario: string;
+};
+
+export type BrainstormMessage = {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  createdAt: string;
+};
+
+export type BrainstormTurnResult = {
+  assistantMessage: string;
+  confirmedRequirementMarkdown: string;
+  summaryMarkdown: string;
+  confidence: number;
+  missingInformation: string[];
+  readyToFinalize: boolean;
 };
 
 export type AppPhase =
@@ -72,6 +109,9 @@ export type AppPhase =
   | "generatingQuestions"
   | "answeringQuestions"
   | "generatingPrompt"
+  | "formattingPrompt"
+  | "brainstorming"
+  | "finalizingBrainstorm"
   | "completed"
   | "error";
 

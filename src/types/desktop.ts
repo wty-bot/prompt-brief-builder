@@ -5,8 +5,10 @@ import type {
   ApiDiagnostics,
   ClarifyingAnswer,
   ClarifyingQuestion,
+  BrainstormMessage,
   OptimizedPromptResult,
   RequirementInput,
+  WorkflowMode,
 } from "./app.js";
 
 export type ProviderPresetId =
@@ -43,6 +45,61 @@ export type LlmGenerateRequest = {
   userPrompt: string;
 };
 
+export type LlmStreamRequest = LlmGenerateRequest & {
+  taskId: string;
+  timeoutMs: number;
+  idleTimeoutMs: number;
+};
+
+export type LlmStreamStartResult = {
+  taskId: string;
+};
+
+export type LlmStreamEvent =
+  | {
+      taskId: string;
+      type: "started";
+      context: LlmGenerateRequest["context"];
+      startedAt: string;
+      streamEnabled: boolean;
+      usedJsonMode: boolean;
+    }
+  | {
+      taskId: string;
+      type: "phase";
+      phase: "connecting" | "waiting" | "streaming" | "parsing";
+      message: string;
+      elapsedMs: number;
+    }
+  | {
+      taskId: string;
+      type: "chunk";
+      delta: string;
+      content: string;
+      elapsedMs: number;
+    }
+  | {
+      taskId: string;
+      type: "complete";
+      content: string;
+      diagnostics: ApiDiagnostics;
+      elapsedMs: number;
+    }
+  | {
+      taskId: string;
+      type: "error";
+      message: string;
+      diagnostics?: ApiDiagnostics;
+      partialContent: string;
+      elapsedMs: number;
+    }
+  | {
+      taskId: string;
+      type: "canceled";
+      partialContent: string;
+      elapsedMs: number;
+    };
+
 export type HistorySummary = {
   id: string;
   title: string;
@@ -52,9 +109,13 @@ export type HistorySummary = {
 };
 
 export type HistorySession = HistorySummary & {
+  mode?: WorkflowMode;
   requirementInput: RequirementInput;
   questions: ClarifyingQuestion[];
   answers: ClarifyingAnswer[];
+  brainstormMessages?: BrainstormMessage[];
+  brainstormSummaryMarkdown?: string;
+  brainstormConfirmedRequirements?: string[];
   result: OptimizedPromptResult;
   diagnostics: ApiDiagnostics | null;
 };
@@ -65,6 +126,9 @@ export type DesktopApi = {
   };
   llm: {
     generate: (request: LlmGenerateRequest) => Promise<ApiCallResult>;
+    startStream: (request: LlmStreamRequest) => Promise<LlmStreamStartResult>;
+    cancelStream: (taskId: string) => Promise<void>;
+    onStreamEvent: (listener: (event: LlmStreamEvent) => void) => () => void;
   };
   settings: {
     load: () => Promise<DesktopSettings | null>;

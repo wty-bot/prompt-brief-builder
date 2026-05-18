@@ -39,14 +39,19 @@ jobs:
           ELECTRON_BUILDER_CACHE: ${{ runner.temp }}\electron-builder-cache
         run: npm run dist:win
 
+      - name: Prepare release notes
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref_name }}"
+          $body = Get-Content -Raw -Encoding UTF8 RELEASE_NOTES.md
+          $body = $body -replace "Prompt Brief Builder v0\.3\.0", "Prompt Brief Builder $version"
+          Set-Content -Path release-notes.md -Value $body -Encoding UTF8
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           name: Prompt Brief Builder ${{ github.ref_name }}
-          body: |
-            Windows desktop release for Prompt Brief Builder.
-
-            Download the NSIS installer below, run it, then launch Prompt Brief Builder from the Start Menu or desktop shortcut.
+          body_path: release-notes.md
           files: |
             release/*.exe
             release/*.blockmap

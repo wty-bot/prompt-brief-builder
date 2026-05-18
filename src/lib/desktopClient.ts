@@ -5,6 +5,8 @@ import type {
   DesktopSettings,
   HistorySession,
   LlmGenerateRequest,
+  LlmStreamEvent,
+  LlmStreamRequest,
 } from "../types/desktop";
 
 function requireDesktopApi() {
@@ -58,6 +60,18 @@ export async function generateDesktopChatCompletion(
   } catch (error) {
     throw normalizeDesktopError(error);
   }
+}
+
+export async function startDesktopStream(request: LlmStreamRequest) {
+  return requireDesktopApi().llm.startStream(request);
+}
+
+export async function cancelDesktopStream(taskId: string) {
+  await requireDesktopApi().llm.cancelStream(taskId);
+}
+
+export function onDesktopStreamEvent(listener: (event: LlmStreamEvent) => void) {
+  return requireDesktopApi().llm.onStreamEvent(listener);
 }
 
 export async function listHistory() {

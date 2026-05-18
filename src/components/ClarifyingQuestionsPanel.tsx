@@ -5,6 +5,7 @@ type ClarifyingQuestionsPanelProps = {
   questions: ClarifyingQuestion[];
   answers: ClarifyingAnswer[];
   disabled?: boolean;
+  generating?: boolean;
   onChange: (answers: ClarifyingAnswer[]) => void;
   onGeneratePrompt: () => void;
 };
@@ -23,28 +24,28 @@ export function ClarifyingQuestionsPanel({
   questions,
   answers,
   disabled,
+  generating,
   onChange,
   onGeneratePrompt,
 }: ClarifyingQuestionsPanelProps) {
   if (!questions.length) {
     return (
-      <section className="panel relative overflow-hidden p-6">
-        <div className="absolute inset-0 bg-paper-grid bg-[size:24px_24px] opacity-30" />
+      <section className="panel relative overflow-hidden p-5">
         <div className="relative">
           <div className="flex items-center justify-between gap-4">
             <div>
               <p className="eyebrow">Interview Queue</p>
-              <h2 className="mt-2 text-2xl font-semibold tracking-tight text-ink">
+              <h2 className="mt-1.5 text-xl font-semibold tracking-tight text-ink">
                 等待 AI 生成访谈问题
               </h2>
             </div>
-            <CircleDashed className="h-8 w-8 animate-pulseglow text-moss" />
+            <CircleDashed className="h-7 w-7 animate-pulseglow text-moss" />
           </div>
-          <div className="mt-8 grid gap-3">
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {[1, 2, 3].map((item) => (
               <div
                 key={item}
-                className="rounded-3xl border border-ink/8 bg-white/55 p-5"
+                className="rounded-2xl border border-ink/8 bg-white/55 p-4"
               >
                 <div className="h-3 w-20 rounded-full bg-ink/10" />
                 <div className="mt-4 h-4 w-3/4 rounded-full bg-ink/8" />
@@ -52,7 +53,7 @@ export function ClarifyingQuestionsPanel({
               </div>
             ))}
           </div>
-          <p className="mt-5 text-sm leading-6 text-ink/58">
+          <p className="mt-4 text-sm leading-6 text-ink/58">
             先在左侧写下需求。AI 会把它拆成最关键的 3-7 个确认问题。
           </p>
         </div>
@@ -71,35 +72,35 @@ export function ClarifyingQuestionsPanel({
   };
 
   return (
-    <section className="panel overflow-hidden">
-      <div className="border-b border-ink/8 bg-white/40 p-5">
+    <section className="panel flex min-h-0 flex-col overflow-hidden">
+      <div className="sticky top-0 z-10 border-b border-ink/8 bg-vellum/90 p-4 backdrop-blur">
         <div className="flex items-center gap-4">
-          <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-ink text-vellum shadow-soft">
+          <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-ink text-vellum shadow-soft">
             <MessageSquareText className="h-5 w-5" />
           </span>
           <div>
             <p className="eyebrow">Interview Queue</p>
-            <h2 className="mt-1 text-xl font-semibold tracking-tight text-ink">
+            <h2 className="mt-1 text-lg font-semibold tracking-tight text-ink">
               AI 澄清问题
             </h2>
           </div>
         </div>
-        <p className="mt-4 text-sm leading-6 text-ink/62">
+        <p className="mt-3 text-sm leading-6 text-ink/62">
           回答越完整，最终 Brief 越像一份真正能执行的任务书。不确定的问题可以跳过。
         </p>
       </div>
 
-      <div className="grid gap-4 p-5">
+      <div className="grid min-h-0 gap-3 p-4 lg:grid-cols-2">
         {questions.map((question, index) => {
           const answer = getAnswer(answers, question.id);
 
           return (
             <article
               key={question.id}
-              className="group rounded-[28px] border border-ink/8 bg-white/65 p-5 transition hover:-translate-y-0.5 hover:border-moss/25 hover:shadow-soft"
+              className="group rounded-2xl border border-ink/8 bg-white/65 p-4 transition hover:border-moss/25 hover:shadow-soft"
             >
               <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-moss">
+                <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-moss">
                   Q{index + 1}
                   {question.required ? (
                     <span className="rounded-full bg-amberline/10 px-2 py-1 text-[10px] text-amberline">
@@ -123,12 +124,12 @@ export function ClarifyingQuestionsPanel({
                       : "Waiting"}
                 </span>
               </div>
-              <h3 className="mt-3 text-base font-semibold leading-7 text-ink">
+              <h3 className="mt-3 text-sm font-semibold leading-6 text-ink">
                 {question.question}
               </h3>
               <p className="mt-2 text-sm leading-6 text-ink/70">{question.why}</p>
               <textarea
-                rows={4}
+                rows={3}
                 value={answer.answer}
                 disabled={answer.skipped}
                 onChange={(event) =>
@@ -138,7 +139,7 @@ export function ClarifyingQuestionsPanel({
                   })
                 }
                 placeholder={question.placeholder}
-                className="field mt-4 resize-y disabled:cursor-not-allowed disabled:bg-ink/5"
+                className="field mt-3 resize-y text-sm leading-6 disabled:cursor-not-allowed disabled:bg-ink/5"
               />
               <label className="mt-3 flex items-center gap-3 text-sm text-ink/70">
                 <input
@@ -157,16 +158,24 @@ export function ClarifyingQuestionsPanel({
             </article>
           );
         })}
+      </div>
 
-        <button
-          type="button"
-          onClick={onGeneratePrompt}
-          disabled={disabled}
-          className="accent-button w-full gap-2"
-        >
-          <SendHorizontal className="h-4 w-4" />
-          生成最终 Prompt
-        </button>
+      <div className="sticky bottom-0 z-10 border-t border-ink/8 bg-vellum/92 p-4 backdrop-blur">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-ink/62">
+            已填写 {answers.filter((item) => item.answer.trim()).length}/{questions.length}，跳过{" "}
+            {answers.filter((item) => item.skipped).length} 项。
+          </p>
+          <button
+            type="button"
+            onClick={onGeneratePrompt}
+            disabled={disabled}
+            className="accent-button gap-2"
+          >
+            <SendHorizontal className="h-4 w-4" />
+            {generating ? "正在生成最终 Prompt..." : "生成最终 Prompt"}
+          </button>
+        </div>
       </div>
     </section>
   );

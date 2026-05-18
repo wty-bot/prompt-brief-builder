@@ -74,16 +74,16 @@ export function RequirementForm({
     value.rawRequirement.trim().length > 0 && value.rawRequirement.trim().length < 10;
 
   return (
-    <section className="panel overflow-hidden">
-      <div className="border-b border-ink/8 bg-white/40 p-5">
+    <section className="panel flex min-h-0 flex-col overflow-hidden">
+      <div className="border-b border-ink/8 bg-vellum/90 p-4 backdrop-blur">
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-moss text-white shadow-soft">
+            <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-moss text-white shadow-soft">
               <FilePenLine className="h-5 w-5" />
             </span>
             <div>
               <p className="eyebrow">Draft Input</p>
-              <h2 className="mt-1 text-xl font-semibold tracking-tight text-ink">
+              <h2 className="mt-1 text-lg font-semibold tracking-tight text-ink">
                 输入你的原始想法
               </h2>
             </div>
@@ -92,22 +92,22 @@ export function RequirementForm({
             不完整也可以
           </span>
         </div>
-        <p className="mt-4 text-sm leading-6 text-ink/62">
+        <p className="mt-3 text-sm leading-6 text-ink/62">
           这里像一张草稿纸。把你知道的先写下来，下一步 AI 会像产品访谈一样补问关键缺口。
         </p>
       </div>
 
-      <div className="grid gap-4 p-5">
+      <div className="grid min-h-0 gap-4 p-4">
         <label key={primaryField.key} className="grid gap-2">
           <span className="text-sm font-semibold text-ink">
             {primaryField.label} *
           </span>
           <textarea
-            rows={primaryField.rows}
+            rows={5}
             value={value[primaryField.key]}
             onChange={(event) => onChange(updateField(value, primaryField.key, event))}
             placeholder={primaryField.placeholder}
-            className="field min-h-[220px] resize-y bg-vellum bg-paper-grid bg-[size:22px_22px] text-base leading-8"
+            className="field min-h-[170px] resize-y bg-white text-sm leading-7"
           />
         </label>
 
@@ -115,20 +115,18 @@ export function RequirementForm({
           <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-ink">
             补充上下文（可选）
           </summary>
-          <div className="grid gap-4 border-t border-ink/8 p-4">
+          <div className="grid gap-4 border-t border-ink/8 p-4 xl:grid-cols-2">
             {optionalFields.map((field) => (
               <label key={field.key} className="grid gap-2">
-            <span className="text-sm font-semibold text-ink">
-              {field.label}
-            </span>
-            <textarea
-              rows={field.rows}
-              value={value[field.key]}
-              onChange={(event) => onChange(updateField(value, field.key, event))}
-              placeholder={field.placeholder}
-              className="field resize-y"
-            />
-          </label>
+                <span className="text-sm font-semibold text-ink">{field.label}</span>
+                <textarea
+                  rows={field.rows}
+                  value={value[field.key]}
+                  onChange={(event) => onChange(updateField(value, field.key, event))}
+                  placeholder={field.placeholder}
+                  className="field resize-y text-sm leading-6"
+                />
+              </label>
             ))}
           </div>
         </details>
@@ -139,15 +137,17 @@ export function RequirementForm({
           </div>
         ) : null}
 
-        <button
-          type="button"
-          onClick={onGenerateQuestions}
-          disabled={disabled || !value.rawRequirement.trim()}
-          className="primary-button w-full gap-2"
-        >
-          <WandSparkles className="h-4 w-4" />
-          生成澄清问题
-        </button>
+        <div className="sticky bottom-0 z-10 -mx-4 border-t border-ink/8 bg-vellum/92 px-4 py-4 backdrop-blur">
+          <button
+            type="button"
+            onClick={onGenerateQuestions}
+            disabled={disabled || !value.rawRequirement.trim()}
+            className="primary-button w-full gap-2"
+          >
+            <WandSparkles className="h-4 w-4" />
+            生成澄清问题
+          </button>
+        </div>
       </div>
     </section>
   );

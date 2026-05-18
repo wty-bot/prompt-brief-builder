@@ -1,72 +1,108 @@
 import ReactMarkdown from "react-markdown";
-import { ClipboardCopy, FileCheck2, RotateCcw } from "lucide-react";
+import { FileCheck2, RotateCcw } from "lucide-react";
+
+import { CopyFeedbackButton, type CopyAction } from "./CopyFeedbackButton";
+import { PromptDocument } from "./PromptDocument";
+import { normalizePromptField } from "../lib/responseParsers";
 
 type ResultPanelProps = {
   finalPromptMarkdown: string;
   improvementNotesMarkdown: string;
-  onCopyPrompt: () => void;
-  onCopyNotes: () => void;
+  sourceLabel?: string;
+  outputKind?: string;
+  onCopyPrompt: CopyAction;
+  onCopyNotes: CopyAction;
   onClear: () => void;
 };
 
-function MarkdownCard({
-  title,
-  value,
-  actionLabel,
-  onAction,
-}: {
-  title: string;
-  value: string;
-  actionLabel: string;
-  onAction: () => void;
-}) {
-  return (
-    <article className="rounded-[28px] border border-ink/8 bg-vellum/90 p-5 shadow-insetline">
-      <div className="flex items-center justify-between gap-3">
-        <h3 className="text-lg font-semibold text-ink">{title}</h3>
-        <button
-          type="button"
-          onClick={onAction}
-          className="ghost-button gap-2"
-        >
-          <ClipboardCopy className="h-4 w-4" />
-          {actionLabel}
-        </button>
-      </div>
-      <div className="prose prose-sm mt-5 max-w-none prose-headings:text-ink prose-p:text-ink/80 prose-strong:text-ink prose-li:text-ink/80">
-        <ReactMarkdown>{value}</ReactMarkdown>
-      </div>
-    </article>
-  );
+function normalizeNotesMarkdown(value: string) {
+  let current = value.trim();
+  if (!current) return "";
+
+  for (let index = 0; index < 4; index += 1) {
+    const fenced = current.match(/^```(?:json|markdown|md)?\s*([\s\S]*?)\s*```$/i);
+    if (fenced?.[1]) {
+      current = fenced[1].trim();
+    }
+
+    try {
+      const parsed = JSON.parse(current) as
+        | string
+        | {
+            improvementNotesMarkdown?: string;
+            notes?: string;
+            content?: string;
+          };
+
+      if (typeof parsed === "string" && parsed.trim() && parsed.trim() !== current) {
+        current = parsed.trim();
+        continue;
+      }
+
+      if (typeof parsed === "object" && parsed) {
+        const next = parsed.improvementNotesMarkdown ?? parsed.notes ?? parsed.content;
+        if (next?.trim() && next.trim() !== current) {
+          current = next.trim();
+          continue;
+        }
+      }
+    } catch {
+      return normalizePromptField(current, "improvementNotesMarkdown") || current;
+    }
+
+    return normalizePromptField(current, "improvementNotesMarkdown") || current;
+  }
+
+  return normalizePromptField(current, "improvementNotesMarkdown") || current;
 }
 
 export function ResultPanel({
   finalPromptMarkdown,
   improvementNotesMarkdown,
+  sourceLabel,
+  outputKind,
   onCopyPrompt,
   onCopyNotes,
   onClear,
 }: ResultPanelProps) {
+  const readableNotes = normalizeNotesMarkdown(improvementNotesMarkdown);
+
   return (
-    <section className="panel overflow-hidden">
-      <div className="border-b border-ink/8 bg-ink p-5 text-vellum">
+    <section className="overflow-hidden rounded-2xl border border-black/10 bg-white shadow-sm">
+      <div className="border-b border-black/8 bg-white px-5 py-4">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-moss">
+            <p className="eyebrow">
               Ready Brief
             </p>
-            <h2 className="mt-2 flex items-center gap-3 text-2xl font-semibold tracking-tight">
-              <FileCheck2 className="h-6 w-6 text-amberline" />
+            <h2 className="mt-2 flex items-center gap-3 text-xl font-semibold tracking-tight text-ink">
+              <FileCheck2 className="h-5 w-5 text-[#0071e3]" />
               优化结果
             </h2>
-            <p className="mt-2 text-sm leading-6 text-vellum/62">
-              最终输出固定为 Markdown，适合直接复制给 Coding Agent 或通用 Agent。
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-ink/62">
+              {outputKind === "轻量 Prompt"
+                ? "最终输出是轻量 Prompt，适合直接复制给 Coding Agent 或通用 Agent。"
+                : "最终输出已按章节整理，适合直接复制给 Coding Agent 或通用 Agent。"}
             </p>
+            {sourceLabel || outputKind ? (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {sourceLabel ? (
+                  <span className="rounded-full border border-black/8 bg-[#f5f5f7] px-3 py-1 text-xs font-semibold text-ink/58">
+                    {sourceLabel}
+                  </span>
+                ) : null}
+                {outputKind ? (
+                  <span className="rounded-full border border-black/8 bg-[#f5f5f7] px-3 py-1 text-xs font-semibold text-ink/58">
+                    {outputKind}
+                  </span>
+                ) : null}
+              </div>
+            ) : null}
           </div>
           <button
             type="button"
             onClick={onClear}
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-white/12 bg-white/8 px-4 py-2 text-sm font-semibold text-vellum transition hover:bg-white/12"
+            className="ghost-button gap-2"
           >
             <RotateCcw className="h-4 w-4" />
             清空当前会话
@@ -74,19 +110,29 @@ export function ResultPanel({
         </div>
       </div>
 
-      <div className="grid gap-4 p-5">
-        <MarkdownCard
+      <div className="grid gap-4 p-4">
+        <PromptDocument
           title="最终 Prompt"
-          value={finalPromptMarkdown}
-          actionLabel="复制 Prompt"
-          onAction={onCopyPrompt}
+          markdown={finalPromptMarkdown}
+          onCopy={onCopyPrompt}
         />
-        <MarkdownCard
-          title="优化说明"
-          value={improvementNotesMarkdown}
-          actionLabel="复制说明"
-          onAction={onCopyNotes}
-        />
+
+        <article className="rounded-2xl border border-black/10 bg-[#f5f5f7] p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="eyebrow">Notes</p>
+              <h3 className="mt-1 text-lg font-semibold text-ink">优化说明</h3>
+            </div>
+            <CopyFeedbackButton
+              onCopy={onCopyNotes}
+              label="复制说明"
+              className="min-h-9 gap-2 px-3 text-xs"
+            />
+          </div>
+          <div className="prose prose-sm mt-4 max-w-none prose-headings:text-ink prose-p:leading-7 prose-p:text-ink/76 prose-li:leading-7 prose-li:text-ink/76 prose-code:rounded-md prose-code:bg-black/5 prose-code:px-1.5 prose-code:py-0.5 prose-code:text-ink prose-pre:bg-ink">
+            <ReactMarkdown>{readableNotes}</ReactMarkdown>
+          </div>
+        </article>
       </div>
     </section>
   );

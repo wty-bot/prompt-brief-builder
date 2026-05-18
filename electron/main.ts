@@ -456,13 +456,17 @@ async function createWindow() {
     return;
   }
 
-  await mainWindow.loadFile(path.join(__dirname, "../dist/index.html"));
+  await mainWindow.loadFile(path.join(__dirname, "../../dist/index.html"));
 }
 
-await app.whenReady();
-await ensureDataDirs();
-await registerIpc();
-await createWindow();
+async function bootstrap() {
+  await app.whenReady();
+  await ensureDataDirs();
+  await registerIpc();
+  await createWindow();
+}
+
+void bootstrap();
 
 app.on("activate", () => {
   if (BrowserWindow.getAllWindows().length === 0) {

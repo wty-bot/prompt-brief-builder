@@ -26,7 +26,7 @@
     "lint": "tsc --noEmit --pretty false && tsc --noEmit -p tsconfig.node.json --pretty false && tsc --noEmit -p tsconfig.electron.json --pretty false",
     "test": "vitest",
     "test:run": "vitest run",
-    "dist:win": "npm run build && electron-builder --win nsis",
+    "dist:win": "npm run build && electron-builder --win nsis --publish never",
     "check": "npm run lint && npm run test:run && npm run build"
   },
   "dependencies": {

@@ -93,7 +93,7 @@ export function RequirementForm({
           </span>
         </div>
         <p className="mt-3 text-sm leading-6 text-ink/62">
-          这里像一张草稿纸。把你知道的先写下来，下一步 AI 会像产品访谈一样补问关键缺口。
+          把你已经确定的内容先写下来，下一步 AI 会继续补问关键缺口。
         </p>
       </div>
 

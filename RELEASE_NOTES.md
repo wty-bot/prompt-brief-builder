@@ -1,4 +1,4 @@
-# Prompt Brief Builder v0.3.0 发行说明
+# Prompt Brief Builder v1.0.0 发行说明
 
 这是 Prompt Brief Builder 的 Windows 桌面端发布版本。
 

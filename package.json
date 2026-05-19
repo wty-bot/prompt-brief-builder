@@ -1,7 +1,7 @@
 {
   "name": "ai-requirement-prompt-optimizer",
   "private": true,
-  "version": "0.3.0",
+  "version": "1.0.0",
   "type": "module",
   "description": "一个 Windows 桌面端 AI 需求描述优化器，把模糊需求澄清并整理成可交给 Agent 执行的 Markdown Prompt。",
   "author": "wty-bot",

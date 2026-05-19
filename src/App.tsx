@@ -1526,8 +1526,7 @@ function App() {
           <p className="eyebrow">Desktop Required</p>
           <h1 className="mt-2 text-2xl font-semibold">请使用桌面端启动</h1>
           <p className="mt-3 text-sm leading-6 text-ink/65">
-            当前版本的模型请求、历史记录和密钥保存依赖 Electron 主进程。开发时请运行
-            <code className="mx-1 rounded bg-ink/8 px-1.5 py-0.5">npm run dev:desktop</code>。
+            当前版本的模型请求、历史记录和密钥保存依赖 Electron 主进程，请通过桌面端启动应用。
           </p>
         </div>
       </div>

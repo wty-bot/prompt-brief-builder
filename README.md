@@ -2,7 +2,7 @@
 
 Prompt Brief Builder 是一个 Windows 桌面端 AI 需求描述优化器。它可以把零散、口语化、还没想清楚的需求，整理成更适合交给 Codex、Claude Code、Cursor、ChatGPT 等 AI Agent 执行的 Prompt 或任务书。
 
-当前版本基于 Electron 构建，不再依赖浏览器直连模型服务，因此可以更稳定地使用 OpenAI-compatible 接口，避开常见的浏览器 CORS 问题。
+当前版本基于 Electron 构建，主要面向 Windows 桌面环境，使用 OpenAI-compatible 接口与模型服务通信。
 
 ## 下载与安装
 
@@ -108,7 +108,7 @@ npm run dist:win
 项目使用 GitHub Actions 自动发布 Windows 安装包：
 
 1. 合并代码到 `main`。
-2. 创建并推送形如 `v0.3.0` 的 tag。
+2. 创建并推送形如 `v1.0.0` 的 tag。
 3. `.github/workflows/release-desktop.yml` 会在 Windows runner 上构建安装包。
 4. 构建完成后，GitHub Release 会自动附带 `.exe` 安装包。
 

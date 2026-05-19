@@ -70,6 +70,8 @@ const activeStreamControllers = new Map<
   }
 >();
 
+let mainWindow: BrowserWindow | null = null;
+
 function getDataPaths() {
   const root = app.getPath("userData");
   return {
@@ -913,7 +915,7 @@ async function registerIpc() {
 
 async function createWindow() {
   const preloadPath = path.join(__dirname, "preload.js");
-  const mainWindow = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 1360,
     height: 900,
     minWidth: 1080,
@@ -935,6 +937,9 @@ async function createWindow() {
   }
 
   await mainWindow.loadFile(path.join(__dirname, "../../dist/index.html"));
+  mainWindow.on("closed", () => {
+    mainWindow = null;
+  });
 }
 
 async function bootstrap() {

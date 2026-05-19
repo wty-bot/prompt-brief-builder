@@ -32,14 +32,28 @@ export type ChatCompletionResponse = {
     };
   }>;
   output_text?: string;
+  output?: Array<{
+    type?: string;
+    content?: Array<{
+      type?: string;
+      text?: string;
+      content?: string;
+    }>;
+  }>;
   text?: string;
   error?: {
     message?: string;
   };
 };
 
-export function buildEndpoint(baseUrl: string) {
-  return `${baseUrl.replace(/\/+$/, "")}/chat/completions`;
+export type WireProtocol = "chat-completions" | "responses";
+
+export function buildEndpoint(baseUrl: string, protocol: WireProtocol = "chat-completions") {
+  const trimmed = baseUrl.replace(/\/+$/, "");
+  if (/\/chat\/completions$/i.test(trimmed) || /\/responses$/i.test(trimmed)) {
+    return trimmed;
+  }
+  return `${trimmed}/${protocol === "responses" ? "responses" : "chat/completions"}`;
 }
 
 export function suggestVersionedBaseUrl(baseUrl: string) {
@@ -73,7 +87,7 @@ export function createSuggestion(transport: ApiTransportState, status?: number) 
         return "认证失败，检查 API Key、账号额度和模型权限。";
       }
       if (status === 404) {
-        return "路径错误，确认 Base URL 是否应该带 /v1，以及是否支持 /chat/completions。";
+        return "路径错误，确认 Base URL 是否应该带 /v1，或该服务是否使用 Responses API。";
       }
       if (status === 429) {
         return "触发限流，降低频率或切换可用额度更高的模型。";
@@ -100,10 +114,11 @@ export function createDiagnostics(params: {
   status?: number;
   statusText?: string;
   responsePreview?: string;
+  protocol?: WireProtocol;
 }): ApiDiagnostics {
   return {
     context: params.context,
-    endpoint: buildEndpoint(params.baseUrl),
+    endpoint: buildEndpoint(params.baseUrl, params.protocol),
     elapsedMs: params.elapsedMs,
     transport: params.transport,
     usedJsonMode: params.usedJsonMode,
@@ -134,6 +149,29 @@ export function buildRequestBody(
   };
 }
 
+export function buildResponsesRequestBody(
+  config: Pick<ApiConfig, "model" | "temperature">,
+  messages: ChatMessage[],
+) {
+  const systemPrompt = messages
+    .filter((message) => message.role === "system")
+    .map((message) => message.content)
+    .join("\n\n")
+    .trim();
+  const input = messages
+    .filter((message) => message.role !== "system")
+    .map((message) => `${message.role.toUpperCase()}:\n${message.content}`)
+    .join("\n\n")
+    .trim();
+
+  return {
+    model: config.model,
+    temperature: config.temperature,
+    ...(systemPrompt ? { instructions: systemPrompt } : {}),
+    input,
+  };
+}
+
 export function extractResponseContent(payload: ChatCompletionResponse | null) {
   const choice = payload?.choices?.[0];
   const message = choice?.message;
@@ -159,6 +197,11 @@ export function extractResponseContent(payload: ChatCompletionResponse | null) {
     message?.text,
     choice?.text,
     payload?.output_text,
+    payload?.output
+      ?.flatMap((item) => item.content ?? [])
+      .map((part) => part.text ?? part.content ?? "")
+      .join("")
+      .trim(),
     payload?.text,
     message?.reasoning_content,
     message?.reasoning,

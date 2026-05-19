@@ -42,7 +42,7 @@ Base URL: https://api.openai.com/v1
 Model: gpt-4o-mini
 ```
 
-第三方中转、模型网关或本地代理也可以使用，只要它兼容 `/chat/completions` 接口。
+第三方中转、模型网关或本地代理也可以使用。应用会优先尝试 Chat Completions 路径，并在路径不兼容时尝试 Responses API 路径。
 
 ## 隐私与本地数据
 
@@ -108,7 +108,7 @@ npm run dist:win
 项目使用 GitHub Actions 自动发布 Windows 安装包：
 
 1. 合并代码到 `main`。
-2. 创建并推送形如 `v1.0.0` 的 tag。
+2. 创建并推送形如 `v1.0.1` 的 tag。
 3. `.github/workflows/release-desktop.yml` 会在 Windows runner 上构建安装包。
 4. 构建完成后，GitHub Release 会自动附带 `.exe` 安装包。
 

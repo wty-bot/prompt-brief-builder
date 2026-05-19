@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildEndpoint,
   buildRequestBody,
+  buildResponsesRequestBody,
   createProviderHint,
   createSuggestion,
   extractResponseContent,
@@ -14,6 +15,12 @@ describe("openaiCore", () => {
   it("builds chat completions endpoint without duplicate slash", () => {
     expect(buildEndpoint("https://api.example.com/v1/")).toBe(
       "https://api.example.com/v1/chat/completions",
+    );
+  });
+
+  it("builds responses endpoint for providers using the Responses API", () => {
+    expect(buildEndpoint("https://api.example.com/v1/", "responses")).toBe(
+      "https://api.example.com/v1/responses",
     );
   });
 
@@ -36,6 +43,23 @@ describe("openaiCore", () => {
       model: "test-model",
       temperature: 0.4,
       response_format: { type: "json_object" },
+    });
+  });
+
+  it("builds Responses API request body", () => {
+    const body = buildResponsesRequestBody(
+      { model: "gpt-5.5", temperature: 0.4 },
+      [
+        { role: "system", content: "system prompt" },
+        { role: "user", content: "hello" },
+      ],
+    );
+
+    expect(body).toMatchObject({
+      model: "gpt-5.5",
+      temperature: 0.4,
+      instructions: "system prompt",
+      input: "USER:\nhello",
     });
   });
 
@@ -87,5 +111,21 @@ describe("openaiCore", () => {
         ],
       }),
     ).toBe("fallback text");
+  });
+
+  it("extracts content from Responses API output arrays", () => {
+    expect(
+      extractResponseContent({
+        output: [
+          {
+            type: "message",
+            content: [
+              { type: "output_text", text: "hello" },
+              { type: "output_text", text: " responses" },
+            ],
+          },
+        ],
+      }),
+    ).toBe("hello responses");
   });
 });

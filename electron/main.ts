@@ -22,6 +22,7 @@ import type {
 import {
   buildEndpoint,
   buildRequestBody,
+  buildResponsesRequestBody,
   createDiagnostics,
   createSuggestion,
   extractResponseContent,
@@ -29,6 +30,7 @@ import {
   suggestVersionedBaseUrl,
   type ChatCompletionResponse,
   type ChatMessage,
+  type WireProtocol,
 } from "../src/shared/openaiCore.js";
 import { createHistoryMarkdown } from "../src/shared/historyExport.js";
 
@@ -167,6 +169,9 @@ function sendStreamEvent(sender: Electron.WebContents, event: LlmStreamEvent) {
 function extractStreamDelta(value: unknown) {
   if (!value || typeof value !== "object") return "";
   const payload = value as {
+    type?: string;
+    delta?: string;
+    output_text?: string;
     choices?: Array<{
       delta?: {
         content?: string | Array<{ text?: string; content?: string }>;
@@ -176,16 +181,24 @@ function extractStreamDelta(value: unknown) {
       };
       text?: string;
     }>;
-    output_text?: string;
+    response?: ChatCompletionResponse;
     text?: string;
   };
+  if (typeof payload.delta === "string") return payload.delta;
   const choice = payload.choices?.[0];
   const deltaContent = choice?.delta?.content;
   if (typeof deltaContent === "string") return deltaContent;
   if (Array.isArray(deltaContent)) {
     return deltaContent.map((part) => part.text ?? part.content ?? "").join("");
   }
-  return choice?.message?.content ?? choice?.text ?? payload.output_text ?? payload.text ?? "";
+  return (
+    choice?.message?.content ??
+    choice?.text ??
+    payload.output_text ??
+    payload.response?.output_text ??
+    payload.text ??
+    ""
+  );
 }
 
 function parseSseBuffer(buffer: string) {
@@ -232,8 +245,9 @@ async function requestOnce(
   config: ApiConfig,
   options: RequestOptions,
   expectJson: boolean,
+  protocol: WireProtocol = "chat-completions",
 ): Promise<ApiCallResult> {
-  const endpoint = buildEndpoint(config.baseUrl);
+  const endpoint = buildEndpoint(config.baseUrl, protocol);
   const start = performance.now();
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 20000);
@@ -255,7 +269,11 @@ async function requestOnce(
         "Content-Type": "application/json",
         Authorization: `Bearer ${config.apiKey}`,
       },
-      body: JSON.stringify(buildRequestBody(config, messages, expectJson)),
+      body: JSON.stringify(
+        protocol === "responses"
+          ? buildResponsesRequestBody(config, messages)
+          : buildRequestBody(config, messages, expectJson),
+      ),
       signal: controller.signal,
     });
 
@@ -280,6 +298,7 @@ async function requestOnce(
         status: response.status,
         statusText: response.statusText,
         responsePreview: preview,
+        protocol,
       });
       const message =
         payload?.error?.message ??
@@ -298,6 +317,7 @@ async function requestOnce(
         status: response.status,
         statusText: response.statusText,
         responsePreview: preview,
+        protocol,
       });
       throw createTransportError("模型返回了空内容。", diagnostics);
     }
@@ -313,6 +333,7 @@ async function requestOnce(
         status: response.status,
         statusText: response.statusText,
         responsePreview: preview,
+        protocol,
       }),
     };
   } catch (error) {
@@ -325,6 +346,7 @@ async function requestOnce(
         elapsedMs,
         transport: "timeout",
         usedJsonMode: expectJson,
+        protocol,
       });
       throw createTransportError("请求超时。", diagnostics);
     }
@@ -340,6 +362,7 @@ async function requestOnce(
       elapsedMs,
       transport: "network",
       usedJsonMode: expectJson,
+      protocol,
     });
     throw createTransportError(message, diagnostics);
   } finally {
@@ -368,6 +391,32 @@ async function requestWithFallback(
           },
           options,
         );
+      }
+    }
+
+    const canTryResponses =
+      caught.diagnostics.status === 404 ||
+      caught.diagnostics.transport === "parse" ||
+      Boolean(caught.diagnostics.responsePreview && isHtmlResponse("", caught.diagnostics.responsePreview));
+    if (canTryResponses) {
+      try {
+        return await requestOnce(config, options, false, "responses");
+      } catch (responsesError) {
+        if (responsesError instanceof ApiRequestErrorClass) {
+          const versionedBaseUrl = suggestVersionedBaseUrl(config.baseUrl);
+          if (versionedBaseUrl) {
+            return requestOnce(
+              {
+                ...config,
+                baseUrl: versionedBaseUrl,
+              },
+              options,
+              false,
+              "responses",
+            );
+          }
+        }
+        throw responsesError;
       }
     }
 
@@ -436,29 +485,29 @@ async function runStreamingRequest(
       elapsedMs: getElapsedMs(startedAt),
     });
 
-    const fetchStream = (baseUrl: string) =>
-      fetch(buildEndpoint(baseUrl), {
+    let activeProtocol: WireProtocol = "chat-completions";
+    const messages: ChatMessage[] = [
+      { role: "system", content: request.systemPrompt },
+      { role: "user", content: request.userPrompt },
+    ];
+    const fetchStream = (baseUrl: string, protocol: WireProtocol) =>
+      fetch(buildEndpoint(baseUrl, protocol), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${config.apiKey}`,
       },
       body: JSON.stringify({
-        ...buildRequestBody(
-          config,
-          [
-            { role: "system", content: request.systemPrompt },
-            { role: "user", content: request.userPrompt },
-          ],
-          false,
-        ),
+        ...(protocol === "responses"
+          ? buildResponsesRequestBody(config, messages)
+          : buildRequestBody(config, messages, false)),
         stream: true,
       }),
       signal: controller.signal,
       });
 
     resetIdleTimer();
-    let response = await fetchStream(activeBaseUrl);
+    let response = await fetchStream(activeBaseUrl, activeProtocol);
 
     sendStreamEvent(sender, {
       taskId: request.taskId,
@@ -481,7 +530,7 @@ async function runStreamingRequest(
           message: "当前 Base URL 返回网页，正在自动尝试 /v1 路径...",
           elapsedMs: getElapsedMs(startedAt),
         });
-        response = await fetchStream(activeBaseUrl);
+        response = await fetchStream(activeBaseUrl, activeProtocol);
       } else {
         const diagnostics = createDiagnostics({
           context: request.context,
@@ -517,7 +566,17 @@ async function runStreamingRequest(
           message: "当前路径不可用，正在自动尝试 /v1 路径...",
           elapsedMs: getElapsedMs(startedAt),
         });
-        response = await fetchStream(activeBaseUrl);
+        response = await fetchStream(activeBaseUrl, activeProtocol);
+      } else if (response.status === 404) {
+        activeProtocol = "responses";
+        sendStreamEvent(sender, {
+          taskId: request.taskId,
+          type: "phase",
+          phase: "connecting",
+          message: "当前服务不支持 /chat/completions，正在尝试 /responses...",
+          elapsedMs: getElapsedMs(startedAt),
+        });
+        response = await fetchStream(activeBaseUrl, activeProtocol);
       } else {
         const diagnostics = createDiagnostics({
           context: request.context,
@@ -528,6 +587,7 @@ async function runStreamingRequest(
           status: response.status,
           statusText: response.statusText,
           responsePreview: text.slice(0, 500),
+          protocol: activeProtocol,
         });
         sendStreamEvent(sender, {
           taskId: request.taskId,
@@ -552,6 +612,7 @@ async function runStreamingRequest(
         status: response.status,
         statusText: response.statusText,
         responsePreview: text.slice(0, 500),
+        protocol: activeProtocol,
       });
       sendStreamEvent(sender, {
         taskId: request.taskId,
@@ -576,6 +637,7 @@ async function runStreamingRequest(
         status: response.status,
         statusText: response.statusText,
         responsePreview: text.slice(0, 500),
+        protocol: activeProtocol,
       });
       sendStreamEvent(sender, {
         taskId: request.taskId,
@@ -700,6 +762,7 @@ async function runStreamingRequest(
       status: response.status,
       statusText: response.statusText,
       responsePreview: streamState.partialContent.slice(0, 500),
+      protocol: activeProtocol,
     });
     sendStreamEvent(sender, {
       taskId: request.taskId,

@@ -21,7 +21,7 @@ export function normalizeErrorMessage(error: unknown) {
     }
 
     if (/404|not found/i.test(message)) {
-      return "请求路径不存在：请检查 Base URL 是否正确，或该服务商是否兼容 /chat/completions 路径。";
+      return "请求路径不存在：请检查 Base URL 是否正确，或该服务商是否兼容 /chat/completions 或 /responses 路径。";
     }
 
     if (/cors/i.test(message)) {

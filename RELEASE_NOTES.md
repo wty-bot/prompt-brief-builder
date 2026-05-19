@@ -1,6 +1,6 @@
-# Prompt Brief Builder v1.0.0 发行说明
+# Prompt Brief Builder v1.0.1 发行说明
 
-这是 Prompt Brief Builder 的 Windows 桌面端发布版本。
+这是 Prompt Brief Builder 的 Windows 桌面端修复版本。
 
 ## 下载
 
@@ -8,6 +8,10 @@
 
 ## 主要变化
 
+- 新增 Responses API 兼容，支持 `wire_api = "responses"` 类模型网关。
+- Base URL 会自动尝试 `/chat/completions`、`/v1/chat/completions`、`/responses` 和 `/v1/responses`。
+- 生成任务状态栏会持续更新时间，不再停在初始秒数。
+- 连接模型页和通用按钮增加点击反馈。
 - 桌面端模型请求：通过 Electron 主进程调用 OpenAI-compatible 接口，减少浏览器 CORS 问题。
 - 两种工作模式：格式优化模式和头脑风暴模式。
 - 单栏 Chat 头脑风暴：逐轮澄清需求，每轮沉淀一条确认项。
@@ -24,7 +28,7 @@ Base URL: https://api.openai.com/v1
 Model: gpt-4o-mini
 ```
 
-也可以使用 DeepSeek、OpenRouter、DashScope/通义、Moonshot/Kimi、第三方中转或本地模型网关，只要它兼容 `/chat/completions`。
+也可以使用 DeepSeek、OpenRouter、DashScope/通义、Moonshot/Kimi、第三方中转或本地模型网关。当前版本支持 Chat Completions 与 Responses API 两类路径。
 
 ## 注意事项
 

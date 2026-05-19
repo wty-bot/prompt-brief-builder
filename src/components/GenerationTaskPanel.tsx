@@ -5,6 +5,7 @@ import {
   RotateCcw,
   Square,
 } from "lucide-react";
+import { useEffect, useState } from "react";
 
 import { CopyFeedbackButton, type CopyAction } from "./CopyFeedbackButton";
 import type { ApiDiagnostics, ApiCallContext } from "../types/app";
@@ -38,6 +39,26 @@ export function GenerationTaskPanel({
   onCopyRaw,
   onCopyDiagnostics,
 }: GenerationTaskPanelProps) {
+  const [displayElapsedMs, setDisplayElapsedMs] = useState(task?.elapsedMs ?? 0);
+
+  useEffect(() => {
+    if (!task) return;
+    setDisplayElapsedMs(task.elapsedMs);
+  }, [task?.taskId, task?.elapsedMs]);
+
+  useEffect(() => {
+    if (!task || !["starting", "connecting", "waiting", "streaming", "parsing"].includes(task.status)) {
+      return undefined;
+    }
+
+    const startedAt = Date.now() - task.elapsedMs;
+    const timer = window.setInterval(() => {
+      setDisplayElapsedMs(Date.now() - startedAt);
+    }, 250);
+
+    return () => window.clearInterval(timer);
+  }, [task?.taskId, task?.status, task?.elapsedMs]);
+
   if (!task) return null;
 
   const isRunning = ["starting", "connecting", "waiting", "streaming", "parsing"].includes(
@@ -86,7 +107,7 @@ export function GenerationTaskPanel({
             </p>
             <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold text-ink/52">
               <span className="rounded-full border border-ink/10 bg-white/55 px-2.5 py-1">
-                {(task.elapsedMs / 1000).toFixed(1)}s
+                {(displayElapsedMs / 1000).toFixed(1)}s
               </span>
               <span className="rounded-full border border-ink/10 bg-white/55 px-2.5 py-1">
                 {task.streamEnabled ? "流式响应" : "普通响应"}
